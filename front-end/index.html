@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Finanças</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app">
+    <nav class="nav" aria-label="Navegação principal">
+      <div class="brand">Finanças</div>
+      <a class="nav-item is-active" href="#resumo" aria-current="page">Resumo</a>
+      <a class="nav-item" href="#transacoes">Transações</a>
+      <a class="nav-item" href="#categorias">Categorias</a>
+      <a class="nav-item" href="#metas">Metas</a>
+    </nav>
+
+    <main class="main">
+      <header class="top">
+        <div>
+          <p class="muted">Novembro de 2026</p>
+          <h1>Seu resumo do mês</h1>
+        </div>
+        <button class="btn" type="button" id="btn-nova">Nova transação</button>
+      </header>
+
+      <section class="balance" aria-labelledby="saldo-titulo">
+        <p class="muted-on-dark" id="saldo-titulo">Saldo do mês</p>
+        <p class="balance-value" id="saldo">R$ 0,00</p>
+        <div class="flows">
+          <div class="flow">
+            <span class="flow-label">Ganhos</span>
+            <span class="flow-value" id="ganhos">R$ 0,00</span>
+          </div>
+          <div class="flow">
+            <span class="flow-label">Gastos</span>
+            <span class="flow-value" id="gastos">R$ 0,00</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel chart-panel" aria-labelledby="grafico-titulo">
+        <h2 id="grafico-titulo">Gastos por dia</h2>
+        <svg id="grafico" viewBox="0 0 600 180" role="img" aria-label="Gráfico de gastos diários"></svg>
+      </section>
+
+      <section class="panel list-panel" id="transacoes" aria-labelledby="lista-titulo">
+        <h2 id="lista-titulo">Últimas transações</h2>
+        <ul class="tx-list" id="lista"></ul>
+      </section>
+    </main>
+  </div>
+  <script src="js/app.js"></script>
+</body>
+</html>
