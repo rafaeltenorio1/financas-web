@@ -4,6 +4,7 @@ from urllib.parse import quote_plus
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
+
 postgres_user = quote_plus(os.getenv("POSTGRES_USER", "postgres"))
 postgres_password = quote_plus(os.getenv("POSTGRES_PASSWORD", "postgres"))
 postgres_host = os.getenv("POSTGRES_HOST", "db")
@@ -15,5 +16,14 @@ URL = f"postgresql+psycopg://{postgres_user}:{postgres_password}@{postgres_host}
 engine = create_engine(URL)
 SessionLocal = sessionmaker(bind=engine)
 
+
 class Base(DeclarativeBase):
     pass
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
