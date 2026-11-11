@@ -1,3 +1,5 @@
 .env
 /back-end/.venv
 /back-end/__pycache__
+/backend/.dockerignore
+/back-end/alembic
