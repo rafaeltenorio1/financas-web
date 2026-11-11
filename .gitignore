@@ -1,5 +1,6 @@
 .env
 /back-end/.venv
-/back-end/__pycache__
-/backend/.dockerignore
-/back-end/alembic
+/back-end/.dockerignore
+
+**/__pycache__/
+*.py[cod]
