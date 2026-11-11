@@ -1,3 +1,3 @@
-from .usuario import Usuario
-from .categoria import Categoria
-from .transacao import Transacao
+from models.usuario import Usuario
+from models.categoria import Categoria
+from models.transacao import Transacao
