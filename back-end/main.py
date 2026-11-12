@@ -4,6 +4,7 @@ import psycopg
 from fastapi import FastAPI
 
 from routers import categorias
+from routers import auth
 
 app = FastAPI(title="Finanças", version="0.1.0")
 
@@ -22,3 +23,5 @@ def saude():
     return {"api": "ok", "banco": resultado[0] == 1}
 
 app.include_router(categorias.router)
+
+app.include_router(auth.router)
