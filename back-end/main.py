@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from routers import categorias
 from routers import auth
+from routers import transacoes
 from utils.config import settings
 
 app = FastAPI(title="Finanças", version="0.1.0")
@@ -28,3 +29,4 @@ app.add_middleware(
 
 app.include_router(categorias.router)
 app.include_router(auth.router)
+app.include_router(transacoes.router)
