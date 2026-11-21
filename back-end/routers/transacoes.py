@@ -14,7 +14,6 @@ from schemas.transacao import TransacaoCreate, TransacaoOut, TransacaoUpdate
 from utils.auth import get_usuario_atual
 from utils.csrf import verificar_csrf, verificar_origem
 
-# verificar_origem e verificar_csrf já ignoram GET, então valem para o router inteiro.
 router = APIRouter(
     prefix="/transacoes",
     tags=["transacoes"],
@@ -28,8 +27,7 @@ CATEGORIA_INVALIDA = HTTPException(status_code=422, detail="Categoria inválida.
 async def _buscar_transacao(
     db: AsyncSession, id_transacao: uuid.UUID, usuario: Usuario
 ) -> Transacao:
-    # Filtrar pelo dono impede que um usuário alcance a transação de outro (IDOR).
-    # Inexistente e alheia dão o mesmo 404, para não confirmar que o id existe.
+
     transacao = await db.scalar(
         select(Transacao).where(
             Transacao.id_transacao == id_transacao,
@@ -44,8 +42,7 @@ async def _buscar_transacao(
 async def _validar_categoria(
     db: AsyncSession, id_categoria: uuid.UUID | None, usuario: Usuario
 ) -> None:
-    # A FK só garante que a categoria existe; quem garante que ela é padrão
-    # ou do próprio usuário é esta consulta.
+
     if id_categoria is None:
         return
     permitida = await db.scalar(
@@ -89,7 +86,6 @@ async def listar_transacoes(
 ):
     consulta = select(Transacao).where(Transacao.id_usuario == usuario.id_usuario)
 
-    # Período semiaberto [data_inicio, data_fim): "novembro" é de 01/11 até antes de 01/12.
     if data_inicio is not None:
         consulta = consulta.where(Transacao.data_hora >= data_inicio)
     if data_fim is not None:
@@ -99,7 +95,6 @@ async def listar_transacoes(
     if id_categoria is not None:
         consulta = consulta.where(Transacao.id_categoria == id_categoria)
 
-    # id_transacao desempata transações no mesmo horário, deixando a paginação estável.
     consulta = (
         consulta.order_by(Transacao.data_hora.desc(), Transacao.id_transacao)
         .limit(limit)
@@ -127,8 +122,6 @@ async def editar_transacao(
 ):
     transacao = await _buscar_transacao(db, id_transacao, usuario)
 
-    # exclude_unset: só os campos que vieram no JSON. Assim "não enviado" não
-    # apaga nada, e "enviado como null" limpa o campo opcional.
     alteracoes = dados.model_dump(exclude_unset=True)
     if "id_categoria" in alteracoes:
         await _validar_categoria(db, alteracoes["id_categoria"], usuario)
