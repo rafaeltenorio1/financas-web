@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, Cookie
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import func, select, delete
+from sqlalchemy import select, delete
 
 from datetime import datetime, timedelta, timezone
 
@@ -11,29 +11,16 @@ from database import get_db
 from utils.security import gerar_hash, verificar_senha, gerar_token, hash_token
 from utils.config import settings
 from utils.auth import get_usuario_atual
-from utils.tentativas import esta_bloqueado, registrar_tentativa, _contar_falhas
+from utils.tentativas import esta_bloqueado, registrar_tentativa
+from utils.csrf import verificar_origem, verificar_csrf, gerar_csrf
 
 from models.usuario import Usuario
-from models.log_tentativa import LogTentativa
 from models.sessao import Sessao
 
 from schemas.usuario import UsuarioOut, UsuarioCreate
-from schemas.auth import LoginIn, TrocaSenhaIn, MensagemOut
+from schemas.auth import LoginIn, TrocaSenhaIn, MensagemOut, CSRFTokenOut
 
-router = APIRouter(prefix="/auth", tags=["auth"])
-
-
-async def contar_falhas(db: AsyncSession, coluna, valor, desde) -> int:
-    consulta = (
-        select(func.count())
-        .select_from(LogTentativa)
-        .where(
-            coluna == valor,
-            LogTentativa.sucesso.is_(False),
-            LogTentativa.ocorrida_em > desde,
-        )
-    )
-    return await db.scalar(consulta) or 0
+router = APIRouter(prefix="/auth", tags=["auth"], dependencies=[Depends(verificar_origem)])
 
 
 @router.post("/register", status_code=201, response_model=UsuarioOut)
@@ -106,7 +93,7 @@ async def me(usuario: Usuario = Depends(get_usuario_atual)):
     return usuario
 
 
-@router.post("/logout", status_code=204)
+@router.post("/logout", status_code=204, dependencies=[Depends(verificar_csrf)])
 async def logout(
     response: Response,
     token: str | None = Cookie(default=None, alias="sessao"),
@@ -125,7 +112,7 @@ async def logout(
     )
 
 
-@router.post("/trocar-senha", response_model=MensagemOut)
+@router.post("/trocar-senha", response_model=MensagemOut, dependencies=[Depends(verificar_csrf)])
 async def trocar_senha(
     dados: TrocaSenhaIn,
     request: Request,
@@ -158,4 +145,13 @@ async def trocar_senha(
     await db.commit()
     return MensagemOut(mensagem="Senha alterada com sucesso.")
 
+
+@router.get("/csrf", response_model=CSRFTokenOut, dependencies=[Depends(get_usuario_atual)])
+async def obter_csrf(
+    response: Response,
+    token: str | None = Cookie(default=None, alias="sessao"),
+):
+    response.headers["Cache-Control"] = "no-store"
+    csrf_token = gerar_csrf(token)
+    return {"csrf_token": csrf_token}
     

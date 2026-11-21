@@ -15,5 +15,8 @@ class Settings(BaseSettings):
     LOGIN_JANELA_MIN: int = 15  
     LOGIN_MAX_FALHAS_IP: int = 20
 
+    SECRET_KEY: str
+    CORS_ORIGINS: list[str] = []
+
 
 settings = Settings()

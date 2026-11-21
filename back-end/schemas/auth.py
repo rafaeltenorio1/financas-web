@@ -17,3 +17,7 @@ class TrocaSenhaIn(BaseModel):
 
 class MensagemOut(BaseModel):
     mensagem: str
+
+
+class CSRFTokenOut(BaseModel):
+    csrf_token: str = Field(..., examples=["token_aqui"])
