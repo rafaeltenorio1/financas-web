@@ -79,7 +79,6 @@ async def listar_categorias(
 ):
     consulta = select(Categoria).where(_visivel_para(usuario))
     if tipo is not None:
-        # Sem tipo_padrao a categoria serve para os dois tipos, então entra no filtro.
         consulta = consulta.where(
             or_(Categoria.tipo_padrao == tipo, Categoria.tipo_padrao.is_(None))
         )

@@ -14,7 +14,6 @@ app = FastAPI(title="Finanças", version="0.1.0")
 
 @app.get("/saude")
 async def saude(db: AsyncSession = Depends(get_db)):
-    # Usa a mesma conexão das rotas, então também valida a configuração do database.py.
     resultado = await db.scalar(text("SELECT 1"))
     return {"api": "ok", "banco": resultado == 1}
 
