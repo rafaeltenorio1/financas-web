@@ -16,6 +16,10 @@ class Categoria(Base):
     tipo_padrao: Mapped[TipoTransacao | None] = mapped_column()
     nome: Mapped[str] = mapped_column(String(100))
 
+    @property
+    def padrao(self) -> bool:
+        return self.id_usuario is None
+
     __table_args__ = (
         UniqueConstraint("id_usuario", "nome", name="uq_categoria_usuario_nome", postgresql_nulls_not_distinct=True,),
     )
