@@ -1,28 +1,21 @@
-import os 
-
-import psycopg
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from database import get_db
 from routers import categorias
 from routers import auth
 from utils.config import settings
 
 app = FastAPI(title="Finanças", version="0.1.0")
 
-def conectar():
-    return psycopg.connect(
-        host="db",
-        dbname=os.environ["POSTGRES_DB"],
-        user=os.environ["POSTGRES_USER"],
-        password=os.environ["POSTGRES_PASSWORD"]
-    )
 
 @app.get("/saude")
-def saude(): 
-    with conectar() as conn:    
-        resultado = conn.execute("SELECT 1").fetchone()
-    return {"api": "ok", "banco": resultado[0] == 1}
+async def saude(db: AsyncSession = Depends(get_db)):
+    # Usa a mesma conexão das rotas, então também valida a configuração do database.py.
+    resultado = await db.scalar(text("SELECT 1"))
+    return {"api": "ok", "banco": resultado == 1}
 
 
 app.add_middleware(
