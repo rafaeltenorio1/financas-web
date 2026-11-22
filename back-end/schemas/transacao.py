@@ -25,6 +25,7 @@ class TransacaoOut(BaseModel):
     tipo: TipoTransacao
     forma_pagamento: TipoPagamento | None
     id_conta_recorrente: uuid.UUID | None
+    id_externo: str | None
     descricao: str | None
 
 

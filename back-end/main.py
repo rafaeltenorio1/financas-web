@@ -11,6 +11,7 @@ from routers import categorias
 from routers import auth
 from routers import transacoes
 from routers import contas_recorrentes
+from routers import importacoes
 from utils.config import settings
 from utils.email import aguardar_envios
 from utils.lembretes import executar_lembretes_periodicos
@@ -54,3 +55,4 @@ app.include_router(categorias.router)
 app.include_router(auth.router)
 app.include_router(transacoes.router)
 app.include_router(contas_recorrentes.router)
+app.include_router(importacoes.router)
