@@ -58,3 +58,16 @@ async def test_bloqueia_ip_que_tenta_muitos_emails(client):
     # O e-mail alvo nunca falhou, mas o IP passou do limite.
     resposta = await login(client, email="alvo@example.com")
     assert resposta.status_code == 429
+
+
+async def test_front_consegue_ler_o_tempo_de_espera_do_bloqueio(client):
+    from utils.config import settings
+
+    await cadastrar(client)
+    for _ in range(settings.LOGIN_MAX_FALHAS):
+        await login(client, senha="senha-errada-1")
+
+    resposta = await login(client)
+
+    assert resposta.status_code == 429
+    assert "retry-after" in resposta.headers["access-control-expose-headers"].lower()

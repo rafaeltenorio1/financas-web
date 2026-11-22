@@ -80,3 +80,103 @@ async def test_fuso_inexistente_responde_422(logado):
 )
 async def test_valores_invalidos_respondem_422(logado, corpo):
     assert (await _editar(logado, corpo)).status_code == 422
+
+
+# --- Preferências do painel ------------------------------------------------
+
+PAINEL = {
+    "cartoes": [
+        {"id": "saldo", "largura": "estreito"},
+        {"id": "transacoes", "largura": "largo"},
+        {"id": "contas", "largura": "inteiro"},
+    ],
+    "numeros": ["previsao", "credito", "media12"],
+    "periodo_meses": 12,
+    "lista_transacoes": "lista",
+}
+
+
+async def test_painel_comeca_sem_preferencias(logado):
+    assert (await logado.get("/auth/me")).json()["preferencias_painel"] is None
+
+
+async def test_salva_e_le_as_preferencias_do_painel(logado):
+    resposta = await _editar(logado, {"preferencias_painel": PAINEL})
+
+    assert resposta.status_code == 200, resposta.text
+    assert resposta.json()["preferencias_painel"] == PAINEL
+    assert (await logado.get("/auth/me")).json()["preferencias_painel"] == PAINEL
+
+
+async def test_salvar_painel_nao_mexe_no_resto(logado):
+    await _editar(logado, {"lembrete_dias_antes": 5})
+    await _editar(logado, {"preferencias_painel": PAINEL})
+
+    dados = (await logado.get("/auth/me")).json()
+    assert dados["lembrete_dias_antes"] == 5
+    assert dados["nome"] == "Ana"
+
+
+async def test_editar_outro_campo_nao_apaga_o_painel(logado):
+    await _editar(logado, {"preferencias_painel": PAINEL})
+    await _editar(logado, {"nome": "Ana Maria"})
+
+    assert (await logado.get("/auth/me")).json()["preferencias_painel"] == PAINEL
+
+
+async def test_nulo_volta_ao_painel_padrao(logado):
+    await _editar(logado, {"preferencias_painel": PAINEL})
+    resposta = await _editar(logado, {"preferencias_painel": None})
+
+    assert resposta.status_code == 200
+    assert (await logado.get("/auth/me")).json()["preferencias_painel"] is None
+
+
+async def test_painel_vazio_e_aceito(logado):
+    vazio = {"cartoes": [], "numeros": [], "periodo_meses": 3, "lista_transacoes": "colunas"}
+    resposta = await _editar(logado, {"preferencias_painel": vazio})
+
+    assert resposta.status_code == 200
+    assert resposta.json()["preferencias_painel"] == vazio
+
+
+def _com(**mudancas):
+    return {**PAINEL, **mudancas}
+
+
+@pytest.mark.parametrize(
+    "painel",
+    [
+        _com(cartoes=[{"id": "grafico_hack", "largura": "largo"}]),
+        _com(cartoes=[{"id": "saldo", "largura": "gigante"}]),
+        _com(cartoes=[{"id": "saldo", "largura": "largo"}, {"id": "saldo", "largura": "estreito"}]),
+        _com(cartoes=[{"id": "saldo", "largura": "largo", "cor": "red"}]),
+        _com(numeros=["previsao", "previsao"]),
+        _com(numeros=["senha"]),
+        _com(periodo_meses=6),
+        _com(lista_transacoes="tabela"),
+        _com(extra="nao"),
+        {k: v for k, v in PAINEL.items() if k != "numeros"},
+        "texto",
+        [],
+    ],
+)
+async def test_painel_invalido_responde_422(logado, painel):
+    resposta = await _editar(logado, {"preferencias_painel": painel})
+
+    assert resposta.status_code == 422
+    assert (await logado.get("/auth/me")).json()["preferencias_painel"] is None
+
+
+async def test_painel_grande_demais_responde_422(logado):
+    numeros = ["previsao", "pagar", "media", "credito", "fixos", "maior", "guardado", "quantidade", "assinaturas", "media12", "previsao"]
+    resposta = await _editar(logado, {"preferencias_painel": _com(numeros=numeros)})
+
+    assert resposta.status_code == 422
+
+
+async def test_salvar_painel_exige_csrf(logado):
+    resposta = await logado.patch("/auth/me", json={"preferencias_painel": PAINEL})
+
+    assert resposta.status_code == 403
+    assert (await logado.get("/auth/me")).json()["preferencias_painel"] is None

@@ -6,6 +6,8 @@ Contrato:
 - Nome duplicado (sem diferenciar maiúsculas) entre padrão + do usuário: 409.
 - Editar/apagar padrão: 403. De outro usuário ou inexistente: 404.
 - Apagar uma categoria deixa as transações dela sem categoria.
+- Cor: hex #rrggbb gravado em minúsculas; sem cor no POST, o servidor usa o pastel
+  menos usado pela pessoa; padrão já vêm com cor (migração de dados) e não mudam.
 """
 
 import pytest
@@ -73,7 +75,7 @@ async def test_lista_padrao_em_ordem_do_banco(logado, db):
     assert [c["nome"] for c in categorias] == list(padrao)
     assert all(c["padrao"] is True for c in categorias)
     # O dono não é exposto: o front só precisa saber se é padrão.
-    assert all(set(c) == {"id_categoria", "nome", "tipo_padrao", "padrao"} for c in categorias)
+    assert all(set(c) == {"id_categoria", "nome", "tipo_padrao", "cor", "padrao"} for c in categorias)
 
 
 async def test_lista_inclui_as_proprias_e_nao_as_de_outro(logado, csrf, outro_usuario):
@@ -331,3 +333,83 @@ async def test_outro_usuario_nao_edita_nem_apaga(logado, csrf, outro_usuario):
 
     nomes = [c["nome"] for c in (await logado.get("/categorias")).json()]
     assert "Pet da Ana" in nomes
+
+
+# --- Cor -------------------------------------------------------------------
+
+PASTEIS = ["#7dbde8", "#f0a27a", "#a996ee", "#62c4b8", "#ddc170", "#ec93b8"]
+
+
+async def test_padrao_vem_com_cor_por_tema(logado):
+    categorias = {c["nome"]: c["cor"] for c in (await logado.get("/categorias")).json()}
+    assert all(cor in PASTEIS for cor in categorias.values())
+    assert categorias["Aluguel"] == categorias["Condomínio"] == "#7dbde8"
+    assert categorias["Supermercado/Feira"] == "#f0a27a"
+    assert categorias["Combustível"] == "#ddc170"
+
+
+async def test_cria_com_cor_escolhida_em_minusculas(logado, csrf):
+    resposta = await logado.post(
+        "/categorias", json={"nome": "Pet", "cor": " #12AB9F "}, headers={"X-CSRF-Token": csrf}
+    )
+    assert resposta.status_code == 201, resposta.text
+    assert resposta.json()["cor"] == "#12ab9f"
+
+
+async def test_sem_cor_usa_o_pastel_menos_usado(logado, csrf):
+    cores = [(await _criar(logado, csrf, nome=f"Minha {i}"))["cor"] for i in range(7)]
+    assert cores[:6] == PASTEIS
+    assert cores[6] == PASTEIS[0]
+
+
+async def test_cor_automatica_ignora_cores_personalizadas_e_outros_usuarios(logado, csrf, outro_usuario):
+    await logado.post("/categorias", json={"nome": "Livre", "cor": "#000000"}, headers={"X-CSRF-Token": csrf})
+    csrf_bia = await obter_csrf(outro_usuario)
+    for nome in ("Da Bia 1", "Da Bia 2"):
+        await _criar(outro_usuario, csrf_bia, nome=nome)
+    assert (await _criar(logado, csrf, nome="Primeira pastel"))["cor"] == PASTEIS[0]
+
+
+@pytest.mark.parametrize("cor", ["7dbde8", "#7dbde", "#7dbde8f", "#gggggg", "red", "#7dbde8;}", ""])
+async def test_cor_invalida_retorna_422(logado, csrf, cor):
+    resposta = await logado.post(
+        "/categorias", json={"nome": "Pet", "cor": cor}, headers={"X-CSRF-Token": csrf}
+    )
+    assert resposta.status_code == 422
+
+
+async def test_edita_a_cor(logado, csrf):
+    criada = await _criar(logado, csrf)
+    resposta = await logado.patch(
+        f"/categorias/{criada['id_categoria']}", json={"cor": "#ABCDEF"}, headers={"X-CSRF-Token": csrf}
+    )
+    assert resposta.status_code == 200, resposta.text
+    assert resposta.json()["cor"] == "#abcdef"
+    assert resposta.json()["nome"] == criada["nome"]
+
+
+async def test_editar_cor_nula_retorna_422(logado, csrf):
+    criada = await _criar(logado, csrf)
+    resposta = await logado.patch(
+        f"/categorias/{criada['id_categoria']}", json={"cor": None}, headers={"X-CSRF-Token": csrf}
+    )
+    assert resposta.status_code == 422
+
+
+async def test_cor_da_padrao_nao_muda(logado, csrf, db):
+    padrao = await _uma_padrao(db)
+    resposta = await logado.patch(
+        f"/categorias/{padrao.id_categoria}", json={"cor": "#000000"}, headers={"X-CSRF-Token": csrf}
+    )
+    assert resposta.status_code == 403
+
+
+async def test_banco_recusa_cor_fora_do_formato(db):
+    from sqlalchemy.exc import IntegrityError
+
+    from models.categoria import Categoria
+
+    db.add(Categoria(nome="Direto no banco", cor="#ABCDEF"))
+    with pytest.raises(IntegrityError):
+        await db.commit()
+    await db.rollback()
