@@ -26,6 +26,7 @@ class UsuarioUpdate(BaseModel):
     lembrete_dias_antes: int = Field(default=None, ge=0, le=7)
     lembrete_no_dia: bool = Field(default=None)
     lembrete_atraso: bool = Field(default=None)
+    resumo_mensal: bool = Field(default=None)
 
 
 class UsuarioOut(BaseModel):
@@ -40,3 +41,4 @@ class UsuarioOut(BaseModel):
     lembrete_dias_antes: int
     lembrete_no_dia: bool
     lembrete_atraso: bool
+    resumo_mensal: bool

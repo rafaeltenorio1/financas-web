@@ -4,6 +4,7 @@ from decimal import Decimal
 from html import escape
 
 from models.enums import TipoLembrete, TipoTransacao
+from schemas.resumo import ResumoOut
 
 from utils.config import settings
 from utils.email import ConteudoEmail
@@ -275,6 +276,93 @@ def lembrete_contas(nome: str, itens: list[ItemLembrete], hoje: date) -> Conteud
             "Quando pagar ou receber, marque a conta como paga no Finanças: o vencimento avança "
             "e os lembretes dessa data param. Você pode ajustar esses avisos nas preferências.",
         ],
+        ("Abrir o Finanças", settings.FRONT_URL),
+        secoes,
+    )
+
+
+MESES = [
+    "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+    "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
+]
+
+
+def nome_do_mes(dia: date) -> str:
+    return f"{MESES[dia.month - 1]} de {dia.year}"
+
+
+@dataclass(frozen=True)
+class ContaPrevista:
+    nome: str
+    valor: Decimal
+    tipo: TipoTransacao
+    vencimento: date
+
+
+def _comparacao_despesas(atual: Decimal, anterior: Decimal, mes_anterior: date) -> str | None:
+    if anterior == 0:
+        return None
+    nome = MESES[mes_anterior.month - 1]
+    variacao = round((atual - anterior) / anterior * 100)
+    if variacao > 0:
+        return f"As despesas foram {variacao}% maiores que em {nome}."
+    if variacao < 0:
+        return f"As despesas foram {-variacao}% menores que em {nome}."
+    return f"As despesas ficaram no mesmo nível de {nome}."
+
+
+def resumo_mensal(
+    nome: str,
+    mes: date,
+    resumo: ResumoOut,
+    despesas_mes_anterior: Decimal,
+    mes_anterior: date,
+    contas: list[ContaPrevista],
+    mes_seguinte: date,
+) -> ConteudoEmail:
+    paragrafos = [f"Veja como foi {nome_do_mes(mes)} nas suas finanças."]
+    comparacao = _comparacao_despesas(resumo.despesas, despesas_mes_anterior, mes_anterior)
+    if comparacao:
+        paragrafos.append(comparacao)
+
+    secoes = [
+        (
+            "Totais do mês",
+            [f"Receitas: {formatar_reais(resumo.receitas)}", f"Despesas: {formatar_reais(resumo.despesas)}"],
+        )
+    ]
+
+    maiores = [c for c in resumo.por_categoria if c.tipo is TipoTransacao.DESPESA][:5]
+    if maiores:
+        secoes.append(
+            (
+                "Onde você mais gastou",
+                [
+                    f"{_uma_linha(c.nome or 'Sem categoria')}: {formatar_reais(c.total)} "
+                    f"({round(c.total / resumo.despesas * 100)}% das despesas)"
+                    for c in maiores
+                ],
+            )
+        )
+
+    if contas:
+        itens = [
+            f"{formatar_data(c.vencimento)}: {_uma_linha(c.nome)}, {formatar_reais(c.valor)} "
+            f"({'a receber' if c.tipo is TipoTransacao.RECEITA else 'a pagar'})"
+            for c in contas
+        ]
+        a_pagar = sum((c.valor for c in contas if c.tipo is TipoTransacao.DESPESA), Decimal("0"))
+        a_receber = sum((c.valor for c in contas if c.tipo is TipoTransacao.RECEITA), Decimal("0"))
+        if a_pagar:
+            itens.append(f"Total previsto a pagar: {formatar_reais(a_pagar)}")
+        if a_receber:
+            itens.append(f"Total previsto a receber: {formatar_reais(a_receber)}")
+        secoes.append((f"Contas previstas para {nome_do_mes(mes_seguinte)}", itens))
+
+    return _montar(
+        f"Seu resumo de {nome_do_mes(mes)}",
+        nome,
+        paragrafos,
         ("Abrir o Finanças", settings.FRONT_URL),
         secoes,
     )

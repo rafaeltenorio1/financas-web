@@ -4,7 +4,7 @@ from datetime import date, timedelta
 from models.enums import Periodicidade
 
 
-def _somar_meses(data: date, meses: int, dia: int) -> date:
+def somar_meses(data: date, meses: int, dia: int) -> date:
     total = data.year * 12 + data.month - 1 + meses
     ano, mes = divmod(total, 12)
     mes += 1
@@ -18,5 +18,5 @@ def calcular_proximo_vencimento(
     if periodicidade is Periodicidade.SEMANAL:
         return atual + timedelta(days=7)
     if periodicidade is Periodicidade.MENSAL:
-        return _somar_meses(atual, 1, data_inicio.day)
-    return _somar_meses(atual, 12, data_inicio.day)
+        return somar_meses(atual, 1, data_inicio.day)
+    return somar_meses(atual, 12, data_inicio.day)

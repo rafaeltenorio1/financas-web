@@ -15,6 +15,7 @@ from models.usuario import Usuario
 from utils.config import settings
 from utils.email import enviar_email
 from utils.mensagens_email import ItemLembrete, lembrete_contas
+from utils.resumo_mensal import enviar_resumos
 
 logger = logging.getLogger(__name__)
 
@@ -115,9 +116,14 @@ async def enviar_lembretes(db: AsyncSession, agora: datetime) -> int:
 
 async def executar_lembretes_periodicos() -> None:
     while True:
-        try:
-            async with database.SessionLocal() as db:
-                await enviar_lembretes(db, datetime.now(timezone.utc))
-        except Exception:
-            logger.exception("Falha no envio de lembretes.")
+        tarefas = [
+            (enviar_lembretes, "Falha no envio de lembretes."),
+            (enviar_resumos, "Falha no envio de resumos mensais."),
+        ]
+        for tarefa, mensagem_de_erro in tarefas:
+            try:
+                async with database.SessionLocal() as db:
+                    await tarefa(db, datetime.now(timezone.utc))
+            except Exception:
+                logger.exception(mensagem_de_erro)
         await asyncio.sleep(settings.LEMBRETES_INTERVALO_MIN * 60)
