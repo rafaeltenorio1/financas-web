@@ -17,10 +17,39 @@ from utils.csrf import verificar_origem, verificar_csrf, gerar_csrf
 from models.usuario import Usuario
 from models.sessao import Sessao
 
-from schemas.usuario import UsuarioOut, UsuarioCreate
-from schemas.auth import LoginIn, TrocaSenhaIn, MensagemOut, CSRFTokenOut
+from schemas.usuario import UsuarioOut, UsuarioCreate, UsuarioUpdate
+from schemas.auth import LoginIn, TrocaSenhaIn, MensagemOut, CSRFTokenOut, ExcluirContaIn
 
 router = APIRouter(prefix="/auth", tags=["auth"], dependencies=[Depends(verificar_origem)])
+
+
+async def _confirmar_senha(
+    db: AsyncSession, usuario: Usuario, senha: str, request: Request, erro: str
+) -> None:
+    ip = request.client.host
+    agora = datetime.now(timezone.utc)
+
+    if await esta_bloqueado(db, usuario.email, ip, agora):
+        raise HTTPException(
+            status_code=429,
+            detail="Muitas tentativas. Tente novamente mais tarde.",
+            headers={"Retry-After": str(settings.LOGIN_JANELA_MIN * 60)},
+        )
+
+    senha_valida = await verificar_senha(senha, usuario.senha_hash)
+    await registrar_tentativa(db, usuario.email, ip, senha_valida, agora)
+    if not senha_valida:
+        raise HTTPException(status_code=401, detail=erro)
+
+
+def _apagar_cookie(response: Response) -> None:
+    response.delete_cookie(
+        key="sessao",
+        path="/",
+        httponly=True,
+        secure=settings.COOKIE_SECURE,
+        samesite="lax",
+    )
 
 
 @router.post("/register", status_code=201, response_model=UsuarioOut)
@@ -93,6 +122,18 @@ async def me(usuario: Usuario = Depends(get_usuario_atual)):
     return usuario
 
 
+@router.patch("/me", response_model=UsuarioOut, dependencies=[Depends(verificar_csrf)])
+async def editar_me(
+    dados: UsuarioUpdate,
+    usuario: Usuario = Depends(get_usuario_atual),
+    db: AsyncSession = Depends(get_db),
+):
+    usuario.nome = dados.nome
+    await db.commit()
+    await db.refresh(usuario)
+    return usuario
+
+
 @router.post("/logout", status_code=204, dependencies=[Depends(verificar_csrf)])
 async def logout(
     response: Response,
@@ -103,13 +144,7 @@ async def logout(
         await db.execute(delete(Sessao).where(Sessao.token_hash == hash_token(token)))
         await db.commit()
 
-    response.delete_cookie(
-        key="sessao",
-        path="/",
-        httponly=True,
-        secure=settings.COOKIE_SECURE,
-        samesite="lax",
-    )
+    _apagar_cookie(response)
 
 
 @router.post("/trocar-senha", response_model=MensagemOut, dependencies=[Depends(verificar_csrf)])
@@ -120,20 +155,7 @@ async def trocar_senha(
     token: str | None = Cookie(default=None, alias="sessao"),
     db: AsyncSession = Depends(get_db),
 ):
-    ip = request.client.host
-    agora = datetime.now(timezone.utc)
-
-    if await esta_bloqueado(db, usuario.email, ip, agora):
-        raise HTTPException(
-            status_code=429,
-            detail="Muitas tentativas. Tente novamente mais tarde.",
-            headers={"Retry-After": str(settings.LOGIN_JANELA_MIN * 60)},
-        )
-
-    senha_valida = await verificar_senha(dados.senha_atual, usuario.senha_hash)
-    await registrar_tentativa(db, usuario.email, ip, senha_valida, agora)
-    if not senha_valida:
-        raise HTTPException(status_code=401, detail="Senha atual incorreta.")
+    await _confirmar_senha(db, usuario, dados.senha_atual, request, "Senha atual incorreta.")
 
     usuario.senha_hash = await gerar_hash(dados.senha_nova)
     await db.execute(
@@ -144,6 +166,21 @@ async def trocar_senha(
     )
     await db.commit()
     return MensagemOut(mensagem="Senha alterada com sucesso.")
+
+
+@router.post("/excluir-conta", status_code=204, dependencies=[Depends(verificar_csrf)])
+async def excluir_conta(
+    dados: ExcluirContaIn,
+    request: Request,
+    response: Response,
+    usuario: Usuario = Depends(get_usuario_atual),
+    db: AsyncSession = Depends(get_db),
+):
+    await _confirmar_senha(db, usuario, dados.senha, request, "Senha incorreta.")
+
+    await db.delete(usuario)
+    await db.commit()
+    _apagar_cookie(response)
 
 
 @router.get("/csrf", response_model=CSRFTokenOut, dependencies=[Depends(get_usuario_atual)])

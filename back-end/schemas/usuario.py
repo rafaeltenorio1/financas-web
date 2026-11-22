@@ -1,5 +1,5 @@
 from typing import Annotated
-from pydantic import BaseModel, BeforeValidator, Field, ConfigDict, EmailStr
+from pydantic import BaseModel, BeforeValidator, Field, ConfigDict, EmailStr, StringConstraints
 import uuid
 
 
@@ -10,10 +10,18 @@ def normalizar_email(v: str) -> str:
 
 EmailNormalizado = Annotated[EmailStr, BeforeValidator(normalizar_email)]
 
+NomeUsuario = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=255)
+]
+
 class UsuarioCreate(BaseModel):
-    nome: str = Field(min_length=1, max_length=255)
+    nome: NomeUsuario
     email: EmailNormalizado
     senha: str = Field(min_length=8, max_length=128)
+
+
+class UsuarioUpdate(BaseModel):
+    nome: NomeUsuario
 
 
 class UsuarioOut(BaseModel):

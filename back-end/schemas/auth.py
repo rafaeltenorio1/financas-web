@@ -15,6 +15,10 @@ class TrocaSenhaIn(BaseModel):
     senha_nova: str = Field(min_length=8, max_length=128)
 
 
+class ExcluirContaIn(BaseModel):
+    senha: str = Field(max_length=128)
+
+
 class MensagemOut(BaseModel):
     mensagem: str
 
