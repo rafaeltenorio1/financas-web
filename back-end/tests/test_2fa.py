@@ -311,9 +311,9 @@ async def test_limpeza_apaga_desafios_vencidos(com_2fa, db):
         await _login_ate_desafio(navegador)
 
     agora = datetime.now(timezone.utc)
-    _, _, desafios, _ = await limpar_dados_vencidos(db, agora)
+    _, _, desafios, _, _ = await limpar_dados_vencidos(db, agora)
     assert desafios == 0
 
-    _, _, desafios, _ = await limpar_dados_vencidos(db, agora + timedelta(minutes=10))
+    _, _, desafios, _, _ = await limpar_dados_vencidos(db, agora + timedelta(minutes=10))
     assert desafios == 1
     assert await db.scalar(select(func.count()).select_from(Desafio2FA)) == 0

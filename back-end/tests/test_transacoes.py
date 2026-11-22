@@ -73,7 +73,7 @@ async def test_cria_transacao(logado, csrf):
     assert Decimal(criada["valor"]) == Decimal("150.75")
     assert criada["tipo"] == "despesa"
     assert criada["forma_pagamento"] == "pix"
-    assert criada["recorrente"] is False
+    assert criada["id_conta_recorrente"] is None
     assert criada["id_categoria"] is None
     assert "id_transacao" in criada
     # O dono é implícito: não precisa (nem deve) aparecer na resposta.
@@ -269,7 +269,7 @@ async def test_patch_pode_limpar_campo_opcional(logado, csrf, db):
     assert resposta.json()["id_categoria"] is None
 
 
-@pytest.mark.parametrize("campo", ["valor", "data_hora", "tipo", "recorrente"])
+@pytest.mark.parametrize("campo", ["valor", "data_hora", "tipo"])
 async def test_patch_nao_aceita_null_em_campo_obrigatorio(logado, csrf, campo):
     criada = await _criar(logado, csrf)
     resposta = await logado.patch(

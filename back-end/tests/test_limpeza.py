@@ -87,7 +87,7 @@ async def test_apaga_sessao_expirada_e_inativa_e_mantem_valida(id_usuario, db):
         expira_em=agora + timedelta(days=6),
     )
 
-    sessoes, _, _, _ = await limpar_dados_vencidos(db, agora)
+    sessoes, _, _, _, _ = await limpar_dados_vencidos(db, agora)
 
     assert sessoes == 2
     restantes = await _ids_sessoes(db)
@@ -152,7 +152,7 @@ async def test_sessao_lembrada_usa_a_inatividade_longa(id_usuario, db):
         lembrar=True,
     )
 
-    sessoes, _, _, _ = await limpar_dados_vencidos(db, agora)
+    sessoes, _, _, _, _ = await limpar_dados_vencidos(db, agora)
 
     assert sessoes == 1
     restantes = await _ids_sessoes(db)
@@ -172,7 +172,7 @@ async def test_apaga_so_tentativas_mais_antigas_que_a_retencao(db):
     no_limite = await _criar_tentativa(db, agora - retencao)
     recente = await _criar_tentativa(db, agora - timedelta(minutes=1))
 
-    _, tentativas, _, _ = await limpar_dados_vencidos(db, agora)
+    _, tentativas, _, _, _ = await limpar_dados_vencidos(db, agora)
 
     assert tentativas == 1
     restantes = await _ids_tentativas(db)
@@ -222,7 +222,7 @@ async def test_laco_continua_depois_de_uma_falha(monkeypatch):
         if chamadas == 1:
             raise RuntimeError("banco fora do ar")
         segunda_chamada.set()
-        return 0, 0, 0, 0
+        return 0, 0, 0, 0, 0
 
     monkeypatch.setattr(utils.limpeza, "limpar_dados_vencidos", limpeza_falsa)
     monkeypatch.setattr(settings, "LIMPEZA_INTERVALO_MIN", 0)
@@ -234,3 +234,51 @@ async def test_laco_continua_depois_de_uma_falha(monkeypatch):
     with pytest.raises(asyncio.CancelledError):
         await tarefa
     assert chamadas >= 2
+
+
+async def test_apaga_so_notificacoes_mais_antigas_que_a_retencao(logado, db):
+    from datetime import date
+
+    from models.conta_recorrente import ContaRecorrente
+    from models.enums import Periodicidade, TipoLembrete, TipoTransacao
+    from models.notificacao_enviada import NotificacaoEnviada
+    from models.usuario import Usuario
+    from utils.config import settings
+    from utils.limpeza import limpar_dados_vencidos
+
+    agora = datetime.now(timezone.utc)
+    retencao = timedelta(days=settings.NOTIFICACOES_RETENCAO_DIAS)
+    id_usuario = await db.scalar(select(Usuario.id_usuario))
+    conta = ContaRecorrente(
+        id_usuario=id_usuario,
+        nome="Aluguel",
+        valor=100,
+        tipo=TipoTransacao.DESPESA,
+        periodicidade=Periodicidade.MENSAL,
+        data_inicio=date(2026, 1, 10),
+        proximo_vencimento=date(2026, 1, 10),
+    )
+    db.add(conta)
+    await db.flush()
+    antiga = NotificacaoEnviada(
+        id_conta_recorrente=conta.id_conta_recorrente,
+        tipo=TipoLembrete.NO_DIA,
+        data_referencia=date(2026, 1, 10),
+        enviada_em=agora - retencao - timedelta(seconds=1),
+    )
+    recente = NotificacaoEnviada(
+        id_conta_recorrente=conta.id_conta_recorrente,
+        tipo=TipoLembrete.NO_DIA,
+        data_referencia=date(2026, 2, 10),
+        enviada_em=agora - timedelta(days=1),
+    )
+    db.add_all([antiga, recente])
+    await db.commit()
+    id_recente = recente.id_notificacao_enviada
+
+    *_, notificacoes = await limpar_dados_vencidos(db, agora)
+
+    assert notificacoes == 1
+    db.expire_all()
+    restantes = set(await db.scalars(select(NotificacaoEnviada.id_notificacao_enviada)))
+    assert restantes == {id_recente}

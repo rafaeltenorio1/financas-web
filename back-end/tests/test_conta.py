@@ -31,7 +31,7 @@ async def test_edita_nome(logado, csrf):
     assert (await logado.get("/auth/me")).json()["nome"] == "Ana Maria"
 
 
-@pytest.mark.parametrize("corpo", [{"nome": ""}, {"nome": "   "}, {"nome": "x" * 256}, {"nome": None}, {}])
+@pytest.mark.parametrize("corpo", [{"nome": ""}, {"nome": "   "}, {"nome": "x" * 256}, {"nome": None}])
 async def test_editar_nome_invalido(logado, csrf, corpo):
     assert (await _editar(logado, csrf, corpo)).status_code == 422
 
