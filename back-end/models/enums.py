@@ -12,3 +12,8 @@ class TipoPagamento(enum.Enum):
     CARTAO_DEBITO = "cartao de debito"
     BOLETO = "boleto"
     DINHEIRO = "dinheiro"
+
+class FinalidadeToken(enum.Enum):
+    VERIFICACAO = "verificacao"
+    REDEFINIR_SENHA = "redefinir_senha"
+    TROCAR_EMAIL = "trocar_email"

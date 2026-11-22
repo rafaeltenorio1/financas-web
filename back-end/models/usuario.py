@@ -17,6 +17,7 @@ class Usuario(Base):
     totp_segredo: Mapped[str | None] = mapped_column(String(255))
     totp_ativado_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     totp_ultimo_passo: Mapped[int | None] = mapped_column(BigInteger)
+    email_verificado_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     @validates("email")
     def validate_email(self, key: str, address: str) -> str:
@@ -25,3 +26,7 @@ class Usuario(Base):
     @property
     def dois_fatores(self) -> bool:
         return self.totp_ativado_em is not None
+
+    @property
+    def email_verificado(self) -> bool:
+        return self.email_verificado_em is not None
