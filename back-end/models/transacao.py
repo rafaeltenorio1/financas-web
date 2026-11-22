@@ -21,7 +21,9 @@ class Transacao(Base):
     data_hora: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     tipo: Mapped[TipoTransacao] = mapped_column()
     forma_pagamento: Mapped[TipoPagamento | None] = mapped_column()
-    recorrente : Mapped[bool] = mapped_column(default=False)
+    id_conta_recorrente: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("conta_recorrente.id_conta_recorrente", ondelete="SET NULL")
+    )
     descricao: Mapped[str | None] = mapped_column(String(1000))
 
     __table_args__ = (

@@ -7,3 +7,5 @@ from .log_tentativa import LogTentativa
 from .codigo_recuperacao import CodigoRecuperacao
 from .desafio_2fa import Desafio2FA
 from .token_email import TokenEmail
+from .conta_recorrente import ContaRecorrente
+from .notificacao_enviada import NotificacaoEnviada

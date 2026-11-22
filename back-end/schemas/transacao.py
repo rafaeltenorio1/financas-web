@@ -11,7 +11,6 @@ class TransacaoCreate(BaseModel):
     data_hora: AwareDatetime
     tipo: TipoTransacao
     forma_pagamento: TipoPagamento | None = Field(default=None)
-    recorrente : bool = Field(default=False)
     descricao: str | None = Field(default=None, max_length=1000)
 
 
@@ -25,7 +24,7 @@ class TransacaoOut(BaseModel):
     data_hora: AwareDatetime
     tipo: TipoTransacao
     forma_pagamento: TipoPagamento | None
-    recorrente : bool
+    id_conta_recorrente: uuid.UUID | None
     descricao: str | None
 
 
@@ -36,5 +35,4 @@ class TransacaoUpdate(BaseModel):
     data_hora: AwareDatetime = Field(default=None)
     tipo: TipoTransacao = Field(default=None)
     forma_pagamento: TipoPagamento | None = None
-    recorrente: bool = Field(default=None)
     descricao: str | None = Field(default=None, max_length=1000)

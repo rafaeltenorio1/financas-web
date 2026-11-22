@@ -17,3 +17,15 @@ class FinalidadeToken(enum.Enum):
     VERIFICACAO = "verificacao"
     REDEFINIR_SENHA = "redefinir_senha"
     TROCAR_EMAIL = "trocar_email"
+
+
+class Periodicidade(enum.Enum):
+    SEMANAL = "semanal"
+    MENSAL = "mensal"
+    ANUAL = "anual"
+
+
+class TipoLembrete(enum.Enum):
+    ANTECEDENCIA = "antecedencia"
+    NO_DIA = "no_dia"
+    ATRASO = "atraso"
