@@ -1,0 +1,75 @@
+.auth {
+  min-height: 100vh;
+  display: grid;
+  place-items: start center;
+  padding: var(--esp-6) var(--esp-4) var(--esp-10);
+  background: radial-gradient(ellipse 80% 50% at 50% -10%, var(--verde-800), transparent 70%), var(--fundo);
+}
+.auth-caixa { width: min(420px, 100%); }
+.auth-marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: var(--esp-8);
+  font-size: var(--texto-lg);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+}
+.auth-marca svg { width: 32px; height: 32px; }
+.auth-cartao { display: grid; }
+
+.selo-anel {
+  width: 64px;
+  height: 64px;
+  margin-bottom: var(--esp-5);
+  border-radius: 22px;
+  display: grid;
+  place-items: center;
+  background: conic-gradient(var(--receita) 0 50%, var(--despesa) 50% 100%);
+}
+.selo-anel span {
+  width: 52px;
+  height: 52px;
+  border-radius: 17px;
+  display: grid;
+  place-items: center;
+  background: var(--fundo);
+  color: var(--destaque);
+}
+
+.auth-titulo { font-size: var(--texto-2xl); font-weight: 800; letter-spacing: -0.03em; }
+.auth-sub { margin-top: 6px; color: var(--texto-suave); }
+.auth-cartao .mensagem { margin-top: var(--esp-5); }
+.auth-form { display: grid; gap: var(--esp-4); margin-top: var(--esp-6); }
+.campo-linha { display: flex; justify-content: space-between; align-items: baseline; gap: var(--esp-3); }
+.link-pequeno { padding: 4px 0; font-size: var(--texto-sm); font-weight: 600; color: var(--texto-suave); text-decoration: none; }
+.link-pequeno:hover { color: var(--texto); text-decoration: underline; }
+.auth-rodape { margin-top: var(--esp-6); font-size: var(--texto-sm); color: var(--texto-suave); }
+.auth-rodape a { font-weight: 700; color: var(--texto); text-underline-offset: 3px; }
+.auth-rodape a:hover { text-decoration-thickness: 2px; color: var(--claro); }
+.auth-marca:hover span { text-decoration: underline; text-underline-offset: 4px; }
+.auth-voltar { justify-self: start; margin: 0 0 var(--esp-4) calc(-1 * var(--esp-2)); }
+.entrada-codigo {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.entrada-codigo[data-modo="recuperacao"] { font-size: 1.05rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.auth-troca { justify-self: center; margin-top: var(--esp-3); }
+
+@media (min-width: 481px) {
+  .auth { place-items: center; }
+  .auth-cartao {
+    padding: var(--esp-8) var(--esp-6);
+    border: 1px solid var(--borda);
+    border-radius: var(--raio-xl);
+    background: var(--superficie);
+  }
+  .auth-cartao .selo-anel span { background: var(--superficie); }
+}
+@media (min-width: 900px) {
+  .auth-cartao { padding: var(--esp-10) var(--esp-8); }
+}

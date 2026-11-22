@@ -1,0 +1,73 @@
+:root {
+  --verde-950: #051f20;
+  --verde-900: #0b2b26;
+  --verde-800: #163832;
+  --verde-700: #235347;
+  --verde-300: #8eb69b;
+  --verde-100: #daf1de;
+
+  --receita: #3ee08a;
+  --despesa: #ff6b6b;
+  --aviso: #f2c14e;
+  --receita-escura: #13703f;
+  --despesa-escura: #b3263a;
+  --aviso-escuro: #8a6410;
+
+  --cat-ceu: #7dbde8;
+  --cat-pessego: #f0a27a;
+  --cat-lavanda: #a996ee;
+  --cat-verde-agua: #62c4b8;
+  --cat-areia: #ddc170;
+  --cat-rosa: #ec93b8;
+  --cat-outras: #5f8a76;
+
+  --fundo: var(--verde-950);
+  --superficie: var(--verde-900);
+  --superficie-2: var(--verde-800);
+  --borda: var(--verde-800);
+  --borda-forte: var(--verde-700);
+  --texto: var(--verde-100);
+  --texto-suave: var(--verde-300);
+  --destaque: var(--verde-300);
+  --no-destaque: var(--verde-950);
+  --claro: var(--verde-100);
+  --no-claro: var(--verde-950);
+  --no-claro-suave: var(--verde-700);
+  --branco: #ffffff;
+  --sombra: 0 10px 30px rgba(0, 0, 0, 0.45);
+
+  --fonte: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --texto-xs: 0.78rem;
+  --texto-sm: 0.875rem;
+  --texto-md: 1rem;
+  --texto-lg: 1.15rem;
+  --texto-xl: 1.4rem;
+  --texto-2xl: clamp(1.75rem, 6vw, 2.25rem);
+  --texto-destaque: clamp(2rem, 9vw, 3.2rem);
+
+  --esp-1: 4px;
+  --esp-2: 8px;
+  --esp-3: 12px;
+  --esp-4: 16px;
+  --esp-5: 20px;
+  --esp-6: 24px;
+  --esp-8: 32px;
+  --esp-10: 40px;
+  --esp-12: 48px;
+
+  --raio-sm: 9px;
+  --raio-md: 14px;
+  --raio-lg: 22px;
+  --raio-xl: 28px;
+  --raio-pilula: 999px;
+
+  --altura-campo: 48px;
+  --largura-nav: 236px;
+  --duracao: 160ms;
+}
+
+.claro {
+  --receita: var(--receita-escura);
+  --despesa: var(--despesa-escura);
+  --aviso: var(--aviso-escuro);
+}
