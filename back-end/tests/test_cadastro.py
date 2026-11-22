@@ -18,6 +18,7 @@ async def test_cadastro_cria_usuario_sem_expor_senha(client, db):
         "lembrete_dias_antes",
         "lembrete_no_dia",
         "lembrete_atraso",
+        "resumo_mensal",
     }
     assert dados["email_verificado"] is False
     usuario = await db.scalar(select(Usuario).where(Usuario.email == "ana@example.com"))

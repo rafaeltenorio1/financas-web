@@ -15,6 +15,7 @@ async def test_padroes_do_cadastro(logado):
     assert dados["lembrete_dias_antes"] == 1
     assert dados["lembrete_no_dia"] is True
     assert dados["lembrete_atraso"] is True
+    assert dados["resumo_mensal"] is True
 
 
 async def test_edita_preferencias_sem_mexer_no_nome(logado):
@@ -25,6 +26,7 @@ async def test_edita_preferencias_sem_mexer_no_nome(logado):
             "lembrete_dias_antes": 3,
             "lembrete_no_dia": False,
             "lembrete_atraso": False,
+            "resumo_mensal": False,
         },
     )
 
@@ -35,6 +37,7 @@ async def test_edita_preferencias_sem_mexer_no_nome(logado):
     assert dados["lembrete_dias_antes"] == 3
     assert dados["lembrete_no_dia"] is False
     assert dados["lembrete_atraso"] is False
+    assert dados["resumo_mensal"] is False
 
 
 async def test_editar_nome_nao_mexe_nas_preferencias(logado):
@@ -72,6 +75,7 @@ async def test_fuso_inexistente_responde_422(logado):
         {"fuso": None},
         {"fuso": ""},
         {"lembrete_no_dia": None},
+        {"resumo_mensal": None},
     ],
 )
 async def test_valores_invalidos_respondem_422(logado, corpo):

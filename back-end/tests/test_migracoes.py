@@ -12,3 +12,14 @@ def test_models_e_migracoes_em_sincronia():
     cfg = Config(str(RAIZ_BACKEND / "alembic.ini"))
     cfg.set_main_option("script_location", str(RAIZ_BACKEND / "alembic"))
     command.check(cfg)
+
+
+def test_ultima_migracao_desce_e_sobe():
+    from alembic import command
+    from alembic.config import Config
+
+    cfg = Config(str(RAIZ_BACKEND / "alembic.ini"))
+    cfg.set_main_option("script_location", str(RAIZ_BACKEND / "alembic"))
+    command.downgrade(cfg, "-1")
+    command.upgrade(cfg, "head")
+    command.check(cfg)
