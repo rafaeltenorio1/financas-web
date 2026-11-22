@@ -1,6 +1,10 @@
-from typing import Literal
+from typing import Literal, Self
+from urllib.parse import urlparse
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+TAMANHO_MINIMO_SECRET_KEY = 32
 
 
 class Settings(BaseSettings):
@@ -8,7 +12,11 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
+        hide_input_in_errors=True,
     )
+
+    AMBIENTE: Literal["desenvolvimento", "producao"] = "producao"
+    PROXIES_CONFIAVEIS: list[str] = []
 
     COOKIE_SECURE: bool = True  
     SESSAO_DURACAO_DIAS: int = 7  
@@ -44,6 +52,29 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     TOTP_CHAVE: str
     CORS_ORIGINS: list[str] = []
+
+    @model_validator(mode="after")
+    def validar_producao(self) -> Self:
+        if self.AMBIENTE != "producao":
+            return self
+
+        problemas = []
+        if not self.COOKIE_SECURE:
+            problemas.append("COOKIE_SECURE precisa ser true")
+        if len(self.SECRET_KEY) < TAMANHO_MINIMO_SECRET_KEY or self.SECRET_KEY.startswith("troque"):
+            problemas.append(f"SECRET_KEY precisa ser aleatória e ter ao menos {TAMANHO_MINIMO_SECRET_KEY} caracteres")
+        if self.SMTP_SEGURANCA == "nenhuma":
+            problemas.append("SMTP_SEGURANCA não pode ser nenhuma")
+        if urlparse(self.FRONT_URL).scheme != "https":
+            problemas.append("FRONT_URL precisa usar https")
+        for origem in self.CORS_ORIGINS:
+            endereco = urlparse(origem)
+            if origem == "*" or (endereco.scheme != "https" and endereco.hostname != "localhost"):
+                problemas.append(f"CORS_ORIGINS não aceita {origem!r} em produção")
+
+        if problemas:
+            raise ValueError("Configuração insegura para produção: " + "; ".join(problemas))
+        return self
 
 
 settings = Settings()
