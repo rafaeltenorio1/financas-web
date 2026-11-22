@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import AwareDatetime
-from sqlalchemy import case, func, or_, select, text
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
@@ -14,7 +14,9 @@ from models.usuario import Usuario
 from schemas.resumo import ResumoOut
 from schemas.transacao import TransacaoCreate, TransacaoOut, TransacaoUpdate
 from utils.auth import get_usuario_atual
+from utils.categorias import validar_categoria
 from utils.csrf import verificar_csrf, verificar_origem
+from utils.fuso import validar_fuso
 
 router = APIRouter(
     prefix="/transacoes",
@@ -23,8 +25,6 @@ router = APIRouter(
 )
 
 NAO_ENCONTRADA = HTTPException(status_code=404, detail="Transação não encontrada.")
-CATEGORIA_INVALIDA = HTTPException(status_code=422, detail="Categoria inválida.")
-FUSO_INVALIDO = HTTPException(status_code=422, detail="Fuso horário inválido.")
 ZERO = Decimal("0.00")
 
 
@@ -43,32 +43,13 @@ async def _buscar_transacao(
     return transacao
 
 
-async def _validar_categoria(
-    db: AsyncSession, id_categoria: uuid.UUID | None, usuario: Usuario
-) -> None:
-
-    if id_categoria is None:
-        return
-    permitida = await db.scalar(
-        select(Categoria.id_categoria).where(
-            Categoria.id_categoria == id_categoria,
-            or_(
-                Categoria.id_usuario.is_(None),
-                Categoria.id_usuario == usuario.id_usuario,
-            ),
-        )
-    )
-    if permitida is None:
-        raise CATEGORIA_INVALIDA
-
-
 @router.post("", status_code=201, response_model=TransacaoOut)
 async def criar_transacao(
     dados: TransacaoCreate,
     usuario: Usuario = Depends(get_usuario_atual),
     db: AsyncSession = Depends(get_db),
 ):
-    await _validar_categoria(db, dados.id_categoria, usuario)
+    await validar_categoria(db, dados.id_categoria, usuario)
 
     nova = Transacao(**dados.model_dump(), id_usuario=usuario.id_usuario)
     db.add(nova)
@@ -120,11 +101,7 @@ async def resumo_transacoes(
     usuario: Usuario = Depends(get_usuario_atual),
     db: AsyncSession = Depends(get_db),
 ):
-    fuso_existe = await db.scalar(
-        text("SELECT 1 FROM pg_timezone_names WHERE name = :fuso"), {"fuso": fuso}
-    )
-    if fuso_existe is None:
-        raise FUSO_INVALIDO
+    await validar_fuso(db, fuso)
 
     filtros = [Transacao.id_usuario == usuario.id_usuario]
     if data_inicio is not None:
@@ -218,7 +195,7 @@ async def editar_transacao(
 
     alteracoes = dados.model_dump(exclude_unset=True)
     if "id_categoria" in alteracoes:
-        await _validar_categoria(db, alteracoes["id_categoria"], usuario)
+        await validar_categoria(db, alteracoes["id_categoria"], usuario)
 
     for campo, valor in alteracoes.items():
         setattr(transacao, campo, valor)
