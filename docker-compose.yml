@@ -20,12 +20,20 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     ports:
       - "8000:8000"
     volumes:
       - ./back-end:/app
     command: uv run uvicorn main:app --host 0.0.0.0 --reload
-  
+
+  mailpit:
+    image: axllent/mailpit:v1.34
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
+
   pgadmin:
     image: dpage/pgadmin4
     profiles: ["tools"]
