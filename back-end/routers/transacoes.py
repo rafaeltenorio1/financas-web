@@ -1,8 +1,9 @@
 import uuid
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import AwareDatetime
-from sqlalchemy import or_, select
+from sqlalchemy import case, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
@@ -10,6 +11,7 @@ from models.categoria import Categoria
 from models.enums import TipoTransacao
 from models.transacao import Transacao
 from models.usuario import Usuario
+from schemas.resumo import ResumoOut
 from schemas.transacao import TransacaoCreate, TransacaoOut, TransacaoUpdate
 from utils.auth import get_usuario_atual
 from utils.csrf import verificar_csrf, verificar_origem
@@ -22,6 +24,8 @@ router = APIRouter(
 
 NAO_ENCONTRADA = HTTPException(status_code=404, detail="Transação não encontrada.")
 CATEGORIA_INVALIDA = HTTPException(status_code=422, detail="Categoria inválida.")
+FUSO_INVALIDO = HTTPException(status_code=422, detail="Fuso horário inválido.")
+ZERO = Decimal("0.00")
 
 
 async def _buscar_transacao(
@@ -102,6 +106,96 @@ async def listar_transacoes(
     )
     resultado = await db.scalars(consulta)
     return resultado.all()
+
+
+def _soma_do_tipo(coluna_tipo, coluna_valor, tipo: TipoTransacao):
+    return func.coalesce(func.sum(case((coluna_tipo == tipo, coluna_valor))), ZERO)
+
+
+@router.get("/resumo", response_model=ResumoOut)
+async def resumo_transacoes(
+    data_inicio: AwareDatetime | None = Query(default=None),
+    data_fim: AwareDatetime | None = Query(default=None),
+    fuso: str = Query(default="America/Sao_Paulo", max_length=64),
+    usuario: Usuario = Depends(get_usuario_atual),
+    db: AsyncSession = Depends(get_db),
+):
+    fuso_existe = await db.scalar(
+        text("SELECT 1 FROM pg_timezone_names WHERE name = :fuso"), {"fuso": fuso}
+    )
+    if fuso_existe is None:
+        raise FUSO_INVALIDO
+
+    filtros = [Transacao.id_usuario == usuario.id_usuario]
+    if data_inicio is not None:
+        filtros.append(Transacao.data_hora >= data_inicio)
+    if data_fim is not None:
+        filtros.append(Transacao.data_hora < data_fim)
+
+    totais = (
+        await db.execute(
+            select(
+                _soma_do_tipo(Transacao.tipo, Transacao.valor, TipoTransacao.RECEITA).label("receitas"),
+                _soma_do_tipo(Transacao.tipo, Transacao.valor, TipoTransacao.DESPESA).label("despesas"),
+            ).where(*filtros)
+        )
+    ).one()
+
+    total_categoria = func.sum(Transacao.valor).label("total")
+    por_categoria = (
+        await db.execute(
+            select(
+                Transacao.id_categoria,
+                Categoria.nome,
+                Transacao.tipo,
+                total_categoria,
+                func.count().label("quantidade"),
+            )
+            .outerjoin(Categoria, Transacao.id_categoria == Categoria.id_categoria)
+            .where(*filtros)
+            .group_by(Transacao.id_categoria, Categoria.nome, Transacao.tipo)
+            .order_by(total_categoria.desc(), Categoria.nome)
+        )
+    ).all()
+
+    lancamentos = (
+        select(
+            func.to_char(func.timezone(fuso, Transacao.data_hora), "YYYY-MM").label("mes"),
+            Transacao.tipo,
+            Transacao.valor,
+        )
+        .where(*filtros)
+        .subquery()
+    )
+    receitas_mes = _soma_do_tipo(lancamentos.c.tipo, lancamentos.c.valor, TipoTransacao.RECEITA)
+    despesas_mes = _soma_do_tipo(lancamentos.c.tipo, lancamentos.c.valor, TipoTransacao.DESPESA)
+    por_mes = (
+        await db.execute(
+            select(
+                lancamentos.c.mes,
+                receitas_mes.label("receitas"),
+                despesas_mes.label("despesas"),
+            )
+            .group_by(lancamentos.c.mes)
+            .order_by(lancamentos.c.mes)
+        )
+    ).all()
+
+    return ResumoOut(
+        receitas=totais.receitas,
+        despesas=totais.despesas,
+        saldo=totais.receitas - totais.despesas,
+        por_categoria=[linha._asdict() for linha in por_categoria],
+        por_mes=[
+            {
+                "mes": linha.mes,
+                "receitas": linha.receitas,
+                "despesas": linha.despesas,
+                "saldo": linha.receitas - linha.despesas,
+            }
+            for linha in por_mes
+        ],
+    )
 
 
 @router.get("/{id_transacao}", response_model=TransacaoOut)
