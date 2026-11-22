@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import (CheckConstraint, DateTime, ForeignKey, Numeric, String,)
+from sqlalchemy import (CheckConstraint, DateTime, ForeignKey, Numeric, String, UniqueConstraint,)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database import Base
@@ -25,7 +25,9 @@ class Transacao(Base):
         ForeignKey("conta_recorrente.id_conta_recorrente", ondelete="SET NULL")
     )
     descricao: Mapped[str | None] = mapped_column(String(1000))
+    id_externo: Mapped[str | None] = mapped_column(String(255))
 
     __table_args__ = (
         CheckConstraint("valor > 0", name="check_valor_positivo"),
+        UniqueConstraint("id_usuario", "id_externo", name="uq_transacao_usuario_id_externo"),
     )
