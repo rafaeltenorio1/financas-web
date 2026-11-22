@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 
 import pytest
+from cryptography.fernet import Fernet
 from testcontainers.community.postgres import PostgresContainer
 
 from apoio import ORIGEM_FRONT, cadastrar, criar_cliente, login
@@ -36,6 +37,7 @@ def pytest_configure(config):
         POSTGRES_PASSWORD=_container.password,
         POSTGRES_DB=_container.dbname,
         SECRET_KEY="chave-so-para-testes",
+        TOTP_CHAVE=Fernet.generate_key().decode(),
         # O cliente de teste usa http; com Secure o cookie não seria reenviado.
         COOKIE_SECURE="false",
         CORS_ORIGINS=f'["{ORIGEM_FRONT}"]',

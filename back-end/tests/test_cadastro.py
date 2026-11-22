@@ -8,7 +8,7 @@ async def test_cadastro_cria_usuario_sem_expor_senha(client, db):
 
     dados = await cadastrar(client, email="ana@example.com")
 
-    assert set(dados) == {"id_usuario", "nome", "email"}
+    assert set(dados) == {"id_usuario", "nome", "email", "dois_fatores"}
     usuario = await db.scalar(select(Usuario).where(Usuario.email == "ana@example.com"))
     assert usuario is not None
     # A senha é guardada como hash Argon2, nunca em texto puro.

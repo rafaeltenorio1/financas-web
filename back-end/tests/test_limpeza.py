@@ -86,7 +86,7 @@ async def test_apaga_sessao_expirada_e_inativa_e_mantem_valida(id_usuario, db):
         expira_em=agora + timedelta(days=6),
     )
 
-    sessoes, _ = await limpar_dados_vencidos(db, agora)
+    sessoes, _, _ = await limpar_dados_vencidos(db, agora)
 
     assert sessoes == 2
     restantes = await _ids_sessoes(db)
@@ -133,7 +133,7 @@ async def test_apaga_so_tentativas_mais_antigas_que_a_retencao(db):
     no_limite = await _criar_tentativa(db, agora - retencao)
     recente = await _criar_tentativa(db, agora - timedelta(minutes=1))
 
-    _, tentativas = await limpar_dados_vencidos(db, agora)
+    _, tentativas, _ = await limpar_dados_vencidos(db, agora)
 
     assert tentativas == 1
     restantes = await _ids_tentativas(db)
@@ -183,7 +183,7 @@ async def test_laco_continua_depois_de_uma_falha(monkeypatch):
         if chamadas == 1:
             raise RuntimeError("banco fora do ar")
         segunda_chamada.set()
-        return 0, 0
+        return 0, 0, 0
 
     monkeypatch.setattr(utils.limpeza, "limpar_dados_vencidos", limpeza_falsa)
     monkeypatch.setattr(settings, "LIMPEZA_INTERVALO_MIN", 0)
