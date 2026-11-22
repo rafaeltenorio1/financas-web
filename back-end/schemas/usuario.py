@@ -21,7 +21,11 @@ class UsuarioCreate(BaseModel):
 
 
 class UsuarioUpdate(BaseModel):
-    nome: NomeUsuario
+    nome: NomeUsuario = Field(default=None)
+    fuso: str = Field(default=None, min_length=1, max_length=64)
+    lembrete_dias_antes: int = Field(default=None, ge=0, le=7)
+    lembrete_no_dia: bool = Field(default=None)
+    lembrete_atraso: bool = Field(default=None)
 
 
 class UsuarioOut(BaseModel):
@@ -32,3 +36,7 @@ class UsuarioOut(BaseModel):
     email: str
     dois_fatores: bool
     email_verificado: bool
+    fuso: str
+    lembrete_dias_antes: int
+    lembrete_no_dia: bool
+    lembrete_atraso: bool

@@ -1,4 +1,9 @@
+from dataclasses import dataclass
+from datetime import date
+from decimal import Decimal
 from html import escape
+
+from models.enums import TipoLembrete, TipoTransacao
 
 from utils.config import settings
 from utils.email import ConteudoEmail
@@ -14,10 +19,23 @@ def mascarar_email(email: str) -> str:
 
 
 def _montar(
-    assunto: str, nome: str, paragrafos: list[str], botao: tuple[str, str] | None = None
+    assunto: str,
+    nome: str,
+    paragrafos: list[str],
+    botao: tuple[str, str] | None = None,
+    secoes: list[tuple[str, list[str]]] | None = None,
 ) -> ConteudoEmail:
     linhas_texto = [f"Olá, {nome}.", *paragrafos]
     blocos = "".join(f'<p style="margin:0 0 16px">{escape(p)}</p>' for p in paragrafos)
+
+    for titulo, itens in secoes or []:
+        linhas_texto.append("\n".join([f"{titulo}:", *(f"- {item}" for item in itens)]))
+        blocos += (
+            f'<h2 style="margin:24px 0 8px;font-size:16px;color:#163832">{escape(titulo)}</h2>'
+            '<ul style="margin:0 0 16px;padding-left:20px">'
+            + "".join(f'<li style="margin:0 0 4px">{escape(item)}</li>' for item in itens)
+            + "</ul>"
+        )
 
     if botao is not None:
         rotulo, link = botao
@@ -183,4 +201,80 @@ def email_trocado(nome: str, email_novo: str, ip: str) -> ConteudoEmail:
         f"O e-mail da sua conta agora é {mascarar_email(email_novo)}. "
         "Os próximos avisos irão para o novo endereço.",
         ip,
+    )
+
+
+@dataclass(frozen=True)
+class ItemLembrete:
+    lembrete: TipoLembrete
+    nome: str
+    valor: Decimal
+    tipo: TipoTransacao
+    vencimento: date
+
+
+def formatar_reais(valor: Decimal) -> str:
+    texto = f"{valor:,.2f}"
+    return "R$ " + texto.replace(",", "_").replace(".", ",").replace("_", ".")
+
+
+def formatar_data(dia: date) -> str:
+    return dia.strftime("%d/%m/%Y")
+
+
+def _uma_linha(texto: str) -> str:
+    return " ".join(texto.split())
+
+
+def _descrever_item(item: ItemLembrete) -> str:
+    natureza = "a receber" if item.tipo is TipoTransacao.RECEITA else "a pagar"
+    return f"{_uma_linha(item.nome)}: {formatar_reais(item.valor)} ({natureza}, vencimento em {formatar_data(item.vencimento)})"
+
+
+def _titulo_secao(lembrete: TipoLembrete, vencimento: date, hoje: date) -> str:
+    if lembrete is TipoLembrete.ATRASO:
+        return "Venceram ontem e ainda não foram marcadas como pagas"
+    if lembrete is TipoLembrete.NO_DIA:
+        return "Vencem hoje"
+    dias = (vencimento - hoje).days
+    if dias == 1:
+        return f"Vencem amanhã ({formatar_data(vencimento)})"
+    return f"Vencem em {dias} dias ({formatar_data(vencimento)})"
+
+
+def _assunto_lembrete(item: ItemLembrete) -> str:
+    nome = _uma_linha(item.nome)
+    if item.lembrete is TipoLembrete.ATRASO:
+        return f"Em atraso: {nome}"
+    if item.lembrete is TipoLembrete.NO_DIA:
+        return f"Vence hoje: {nome}"
+    return f"Vence em breve: {nome}"
+
+
+def lembrete_contas(nome: str, itens: list[ItemLembrete], hoje: date) -> ConteudoEmail:
+    ordem = {TipoLembrete.ATRASO: 0, TipoLembrete.NO_DIA: 1, TipoLembrete.ANTECEDENCIA: 2}
+    ordenados = sorted(itens, key=lambda i: (ordem[i.lembrete], i.vencimento, i.nome.lower()))
+
+    secoes: list[tuple[str, list[str]]] = []
+    for item in ordenados:
+        titulo = _titulo_secao(item.lembrete, item.vencimento, hoje)
+        if not secoes or secoes[-1][0] != titulo:
+            secoes.append((titulo, []))
+        secoes[-1][1].append(_descrever_item(item))
+
+    if len(itens) == 1:
+        assunto = _assunto_lembrete(itens[0])
+    else:
+        assunto = f"Você tem {len(itens)} lembretes de contas"
+
+    return _montar(
+        assunto,
+        nome,
+        [
+            "Confira os lembretes das suas contas recorrentes.",
+            "Quando pagar ou receber, marque a conta como paga no Finanças: o vencimento avança "
+            "e os lembretes dessa data param. Você pode ajustar esses avisos nas preferências.",
+        ],
+        ("Abrir o Finanças", settings.FRONT_URL),
+        secoes,
     )

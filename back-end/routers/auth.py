@@ -13,6 +13,7 @@ from utils.config import settings
 from utils.auth import duracao_maxima, get_usuario_atual
 from utils.tentativas import esta_bloqueado, registrar_tentativa
 from utils.csrf import verificar_origem, verificar_csrf, gerar_csrf
+from utils.fuso import validar_fuso
 from utils.email import ConteudoEmail, agendar_envio
 from utils import mensagens_email
 from utils.tokens_email import apagar_tokens_do_usuario, consumir_token, criar_token, montar_link
@@ -285,7 +286,12 @@ async def editar_me(
     usuario: Usuario = Depends(get_usuario_atual),
     db: AsyncSession = Depends(get_db),
 ):
-    usuario.nome = dados.nome
+    alteracoes = dados.model_dump(exclude_unset=True)
+    if "fuso" in alteracoes:
+        await validar_fuso(db, alteracoes["fuso"])
+
+    for campo, valor in alteracoes.items():
+        setattr(usuario, campo, valor)
     await db.commit()
     await db.refresh(usuario)
     return usuario

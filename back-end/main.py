@@ -10,18 +10,25 @@ from database import get_db
 from routers import categorias
 from routers import auth
 from routers import transacoes
+from routers import contas_recorrentes
 from utils.config import settings
 from utils.email import aguardar_envios
+from utils.lembretes import executar_lembretes_periodicos
 from utils.limpeza import executar_limpeza_periodica
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    tarefa = asyncio.create_task(executar_limpeza_periodica())
+    tarefas = [
+        asyncio.create_task(executar_limpeza_periodica()),
+        asyncio.create_task(executar_lembretes_periodicos()),
+    ]
     yield
-    tarefa.cancel()
-    with suppress(asyncio.CancelledError):
-        await tarefa
+    for tarefa in tarefas:
+        tarefa.cancel()
+    for tarefa in tarefas:
+        with suppress(asyncio.CancelledError):
+            await tarefa
     await aguardar_envios(timeout=10)
 
 
@@ -45,3 +52,4 @@ app.add_middleware(
 app.include_router(categorias.router)
 app.include_router(auth.router)
 app.include_router(transacoes.router)
+app.include_router(contas_recorrentes.router)

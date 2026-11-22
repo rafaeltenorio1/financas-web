@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     TOKEN_TROCAR_EMAIL_MIN: int = 60
     TOKEN_INTERVALO_ENVIO_MIN: int = 2
 
+    LEMBRETES_INTERVALO_MIN: int = 15
+    LEMBRETES_HORA: int = 8
+    NOTIFICACOES_RETENCAO_DIAS: int = 90
+
     SECRET_KEY: str
     TOTP_CHAVE: str
     CORS_ORIGINS: list[str] = []
