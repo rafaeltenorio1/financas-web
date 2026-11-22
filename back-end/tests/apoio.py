@@ -29,8 +29,11 @@ async def cadastrar(client, email="ana@example.com", senha=SENHA_PADRAO, nome="A
     return resposta.json()
 
 
-async def login(client, email="ana@example.com", senha=SENHA_PADRAO):
-    return await client.post("/auth/login", json={"email": email, "senha": senha})
+async def login(client, email="ana@example.com", senha=SENHA_PADRAO, lembrar=None):
+    dados = {"email": email, "senha": senha}
+    if lembrar is not None:
+        dados["lembrar"] = lembrar
+    return await client.post("/auth/login", json=dados)
 
 
 async def obter_csrf(client) -> str:

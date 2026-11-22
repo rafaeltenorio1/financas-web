@@ -17,7 +17,7 @@ async def id_usuario(client, db):
     return await db.scalar(select(Usuario.id_usuario))
 
 
-async def _criar_sessao(db, id_usuario, criada_em, ultimo_acesso_em, expira_em):
+async def _criar_sessao(db, id_usuario, criada_em, ultimo_acesso_em, expira_em, lembrar=False):
     from models.sessao import Sessao
 
     sessao = Sessao(
@@ -26,6 +26,7 @@ async def _criar_sessao(db, id_usuario, criada_em, ultimo_acesso_em, expira_em):
         criada_em=criada_em,
         ultimo_acesso_em=ultimo_acesso_em,
         expira_em=expira_em,
+        lembrar=lembrar,
     )
     db.add(sessao)
     await db.commit()
@@ -120,6 +121,44 @@ async def test_limites_da_sessao_seguem_o_mesmo_criterio_da_autenticacao(id_usua
     restantes = await _ids_sessoes(db)
     assert expira_agora not in restantes
     assert no_limite_da_inatividade in restantes
+
+
+async def test_sessao_lembrada_usa_a_inatividade_longa(id_usuario, db):
+    from utils.config import settings
+    from utils.limpeza import limpar_dados_vencidos
+
+    agora = datetime.now(timezone.utc)
+    inatividade_longa = timedelta(days=settings.SESSAO_LEMBRAR_INATIVIDADE_DIAS)
+
+    horas_sem_uso = await _criar_sessao(
+        db, id_usuario,
+        criada_em=agora - timedelta(days=2),
+        ultimo_acesso_em=agora - timedelta(hours=5),
+        expira_em=agora + timedelta(days=80),
+        lembrar=True,
+    )
+    no_limite = await _criar_sessao(
+        db, id_usuario,
+        criada_em=agora - timedelta(days=40),
+        ultimo_acesso_em=agora - inatividade_longa,
+        expira_em=agora + timedelta(days=50),
+        lembrar=True,
+    )
+    abandonada = await _criar_sessao(
+        db, id_usuario,
+        criada_em=agora - timedelta(days=40),
+        ultimo_acesso_em=agora - inatividade_longa - timedelta(seconds=1),
+        expira_em=agora + timedelta(days=50),
+        lembrar=True,
+    )
+
+    sessoes, _, _ = await limpar_dados_vencidos(db, agora)
+
+    assert sessoes == 1
+    restantes = await _ids_sessoes(db)
+    assert horas_sem_uso in restantes
+    assert no_limite in restantes
+    assert abandonada not in restantes
 
 
 async def test_apaga_so_tentativas_mais_antigas_que_a_retencao(db):
