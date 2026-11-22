@@ -13,6 +13,8 @@ from utils.config import settings
 from utils.auth import duracao_maxima, get_usuario_atual
 from utils.tentativas import esta_bloqueado, registrar_tentativa
 from utils.csrf import verificar_origem, verificar_csrf, gerar_csrf
+from utils.email import agendar_envio
+from utils import mensagens_email
 from utils.totp import (
     cifrar,
     gerar_segredo,
@@ -77,9 +79,14 @@ async def _confirmar_senha(
         verificar = verificar_totp if so_totp else verificar_segundo_fator
         valido = await verificar(db, usuario, codigo, agora)
 
-    await registrar_tentativa(db, usuario.email, ip, valido, agora)
+    if await registrar_tentativa(db, usuario.email, ip, valido, agora):
+        _avisar_bloqueio(usuario)
     if not valido:
         raise HTTPException(status_code=401, detail=erro)
+
+
+def _avisar_bloqueio(usuario: Usuario) -> None:
+    agendar_envio(usuario.email, mensagens_email.bloqueio_por_tentativas(usuario.nome))
 
 
 def _apagar_cookie(response: Response) -> None:
@@ -163,7 +170,8 @@ async def login(
     sucesso = usuario is not None and senha_valida
 
     if not sucesso:
-        await registrar_tentativa(db, dados.email, ip, False, agora)
+        if await registrar_tentativa(db, dados.email, ip, False, agora) and usuario is not None:
+            _avisar_bloqueio(usuario)
         raise HTTPException(status_code=401, detail="E-mail ou senha inválidos.")
 
     if usuario.dois_fatores:
@@ -221,7 +229,8 @@ async def login_2fa(
         raise _erro_bloqueio("Muitas tentativas de login. Tente novamente mais tarde.")
 
     codigo_valido = await verificar_segundo_fator(db, usuario, dados.codigo, agora)
-    await registrar_tentativa(db, usuario.email, ip, codigo_valido, agora)
+    if await registrar_tentativa(db, usuario.email, ip, codigo_valido, agora):
+        _avisar_bloqueio(usuario)
     if not codigo_valido:
         raise HTTPException(status_code=401, detail="Código inválido.")
 
@@ -284,6 +293,7 @@ async def trocar_senha(
     usuario.senha_hash = await gerar_hash(dados.senha_nova)
     await _apagar_outras_sessoes(db, usuario, token)
     await db.commit()
+    agendar_envio(usuario.email, mensagens_email.senha_trocada(usuario.nome, request.client.host))
     return MensagemOut(mensagem="Senha alterada com sucesso.")
 
 
@@ -297,9 +307,11 @@ async def excluir_conta(
 ):
     await _confirmar_senha(db, usuario, dados.senha, request, "Senha incorreta.")
 
+    email, nome = usuario.email, usuario.nome
     await db.delete(usuario)
     await db.commit()
     _apagar_cookie(response)
+    agendar_envio(email, mensagens_email.conta_excluida(nome, request.client.host))
 
 
 @router.get("/csrf", response_model=CSRFTokenOut, dependencies=[Depends(get_usuario_atual)])
@@ -352,6 +364,9 @@ async def ativar_2fa(
     codigos = await substituir_codigos_recuperacao(db, usuario)
     await _apagar_outras_sessoes(db, usuario, token)
     await db.commit()
+    agendar_envio(
+        usuario.email, mensagens_email.dois_fatores_ativado(usuario.nome, request.client.host)
+    )
 
     response.headers["Cache-Control"] = "no-store"
     return CodigosRecuperacaoOut(codigos=codigos)
@@ -379,6 +394,9 @@ async def desativar_2fa(
     await db.execute(delete(Desafio2FA).where(Desafio2FA.id_usuario == usuario.id_usuario))
     await _apagar_outras_sessoes(db, usuario, token)
     await db.commit()
+    agendar_envio(
+        usuario.email, mensagens_email.dois_fatores_desativado(usuario.nome, request.client.host)
+    )
     return MensagemOut(mensagem="Verificação em duas etapas desativada.")
 
 
@@ -401,6 +419,9 @@ async def gerar_novos_codigos_recuperacao(
 
     codigos = await substituir_codigos_recuperacao(db, usuario)
     await db.commit()
+    agendar_envio(
+        usuario.email, mensagens_email.codigos_recuperacao_gerados(usuario.nome, request.client.host)
+    )
 
     response.headers["Cache-Control"] = "no-store"
     return CodigosRecuperacaoOut(codigos=codigos)

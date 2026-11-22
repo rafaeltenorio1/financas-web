@@ -20,8 +20,12 @@ async def _contar_falhas(db: AsyncSession, coluna, valor, desde: datetime) -> in
     return await db.scalar(consulta) or 0
 
 
-async def esta_bloqueado(db: AsyncSession, email: str, ip: str, agora: datetime) -> bool:
-    inicio_janela = agora - timedelta(minutes=settings.LOGIN_JANELA_MIN)
+def _inicio_janela(agora: datetime) -> datetime:
+    return agora - timedelta(minutes=settings.LOGIN_JANELA_MIN)
+
+
+async def _falhas_do_email(db: AsyncSession, email: str, agora: datetime) -> int:
+    inicio_janela = _inicio_janela(agora)
 
     # Só conta as falhas posteriores ao último sucesso deste e-mail.
     ultimo_sucesso = await db.scalar(
@@ -32,8 +36,12 @@ async def esta_bloqueado(db: AsyncSession, email: str, ip: str, agora: datetime)
     )
     desde_email = max(inicio_janela, ultimo_sucesso) if ultimo_sucesso else inicio_janela
 
-    falhas_email = await _contar_falhas(db, LogTentativa.email_tentativa, email, desde_email)
-    falhas_ip = await _contar_falhas(db, LogTentativa.ip, ip, inicio_janela)
+    return await _contar_falhas(db, LogTentativa.email_tentativa, email, desde_email)
+
+
+async def esta_bloqueado(db: AsyncSession, email: str, ip: str, agora: datetime) -> bool:
+    falhas_email = await _falhas_do_email(db, email, agora)
+    falhas_ip = await _contar_falhas(db, LogTentativa.ip, ip, _inicio_janela(agora))
 
     return (
         falhas_email >= settings.LOGIN_MAX_FALHAS
@@ -42,9 +50,13 @@ async def esta_bloqueado(db: AsyncSession, email: str, ip: str, agora: datetime)
 
 
 async def registrar_tentativa(
-    db: AsyncSession, email: str, ip: str, sucesso: bool, agora: datetime) -> None:
-    
+    db: AsyncSession, email: str, ip: str, sucesso: bool, agora: datetime) -> bool:
+
     db.add(
         LogTentativa(email_tentativa=email, ip=ip, ocorrida_em=agora, sucesso=sucesso)
     )
     await db.commit()
+
+    if sucesso:
+        return False
+    return await _falhas_do_email(db, email, agora) == settings.LOGIN_MAX_FALHAS

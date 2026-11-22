@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -20,6 +22,14 @@ class Settings(BaseSettings):
     TENTATIVAS_RETENCAO_DIAS: int = 30
     TOTP_EMISSOR: str = "Finanças"
     DESAFIO_2FA_MIN: int = 5
+
+    SMTP_HOST: str = "localhost"
+    SMTP_PORTA: int = 587
+    SMTP_SEGURANCA: Literal["starttls", "ssl", "nenhuma"] = "starttls"
+    SMTP_USUARIO: str = ""
+    SMTP_SENHA: str = ""
+    SMTP_TIMEOUT_S: int = 10
+    EMAIL_REMETENTE: str = "Finanças <nao-responda@localhost>"
 
     SECRET_KEY: str
     TOTP_CHAVE: str
