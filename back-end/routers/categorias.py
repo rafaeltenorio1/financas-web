@@ -11,6 +11,7 @@ from models.enums import TipoTransacao
 from models.usuario import Usuario
 from schemas.categoria import CategoriaCreate, CategoriaOut, CategoriaUpdate
 from utils.auth import get_usuario_atual
+from utils.categorias import cor_menos_usada
 from utils.csrf import verificar_csrf, verificar_origem
 
 router = APIRouter(
@@ -95,7 +96,10 @@ async def criar_categoria(
     if await _nome_em_uso(db, dados.nome, usuario):
         raise NOME_EM_USO
 
-    nova = Categoria(**dados.model_dump(), id_usuario=usuario.id_usuario)
+    valores = dados.model_dump()
+    if valores["cor"] is None:
+        valores["cor"] = await cor_menos_usada(db, usuario)
+    nova = Categoria(**valores, id_usuario=usuario.id_usuario)
     db.add(nova)
     return await _salvar(db, nova)
 
