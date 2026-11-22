@@ -1,7 +1,7 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import BigInteger, CheckConstraint, DateTime, String, true
+from sqlalchemy import BigInteger, CheckConstraint, Date, DateTime, String, true
 from sqlalchemy.orm import Mapped, mapped_column, validates
 
 from database import Base
@@ -24,6 +24,8 @@ class Usuario(Base):
     lembrete_dias_antes: Mapped[int] = mapped_column(default=1, server_default="1")
     lembrete_no_dia: Mapped[bool] = mapped_column(default=True, server_default=true())
     lembrete_atraso: Mapped[bool] = mapped_column(default=True, server_default=true())
+    resumo_mensal: Mapped[bool] = mapped_column(default=True, server_default=true())
+    resumo_enviado_mes: Mapped[date | None] = mapped_column(Date)
 
     __table_args__ = (
         CheckConstraint(
