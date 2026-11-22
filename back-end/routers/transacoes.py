@@ -1,11 +1,14 @@
 import uuid
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import AwareDatetime
-from sqlalchemy import select
+from sqlalchemy import Date, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
+from models.categoria import Categoria
+from models.conta_recorrente import ContaRecorrente
 from models.enums import TipoTransacao
 from models.transacao import Transacao
 from models.usuario import Usuario
@@ -14,6 +17,7 @@ from schemas.transacao import TransacaoCreate, TransacaoOut, TransacaoUpdate
 from utils.auth import get_usuario_atual
 from utils.categorias import validar_categoria
 from utils.csrf import verificar_csrf, verificar_origem
+from utils.exportacao import gerar_csv
 from utils.fuso import validar_fuso
 from utils.resumo import calcular_resumo
 
@@ -39,6 +43,25 @@ async def _buscar_transacao(
     if transacao is None:
         raise NAO_ENCONTRADA
     return transacao
+
+
+def _filtros(
+    usuario: Usuario,
+    data_inicio: datetime | None,
+    data_fim: datetime | None,
+    tipo: TipoTransacao | None,
+    id_categoria: uuid.UUID | None,
+) -> list:
+    filtros = [Transacao.id_usuario == usuario.id_usuario]
+    if data_inicio is not None:
+        filtros.append(Transacao.data_hora >= data_inicio)
+    if data_fim is not None:
+        filtros.append(Transacao.data_hora < data_fim)
+    if tipo is not None:
+        filtros.append(Transacao.tipo == tipo)
+    if id_categoria is not None:
+        filtros.append(Transacao.id_categoria == id_categoria)
+    return filtros
 
 
 @router.post("", status_code=201, response_model=TransacaoOut)
@@ -67,19 +90,11 @@ async def listar_transacoes(
     usuario: Usuario = Depends(get_usuario_atual),
     db: AsyncSession = Depends(get_db),
 ):
-    consulta = select(Transacao).where(Transacao.id_usuario == usuario.id_usuario)
-
-    if data_inicio is not None:
-        consulta = consulta.where(Transacao.data_hora >= data_inicio)
-    if data_fim is not None:
-        consulta = consulta.where(Transacao.data_hora < data_fim)
-    if tipo is not None:
-        consulta = consulta.where(Transacao.tipo == tipo)
-    if id_categoria is not None:
-        consulta = consulta.where(Transacao.id_categoria == id_categoria)
-
+    filtros = _filtros(usuario, data_inicio, data_fim, tipo, id_categoria)
     consulta = (
-        consulta.order_by(Transacao.data_hora.desc(), Transacao.id_transacao)
+        select(Transacao)
+        .where(*filtros)
+        .order_by(Transacao.data_hora.desc(), Transacao.id_transacao)
         .limit(limit)
         .offset(offset)
     )
@@ -97,6 +112,48 @@ async def resumo_transacoes(
 ):
     await validar_fuso(db, fuso)
     return await calcular_resumo(db, usuario.id_usuario, data_inicio, data_fim, fuso)
+
+
+@router.get("/exportar")
+async def exportar_transacoes(
+    data_inicio: AwareDatetime | None = Query(default=None),
+    data_fim: AwareDatetime | None = Query(default=None),
+    tipo: TipoTransacao | None = Query(default=None),
+    id_categoria: uuid.UUID | None = Query(default=None),
+    usuario: Usuario = Depends(get_usuario_atual),
+    db: AsyncSession = Depends(get_db),
+):
+    filtros = _filtros(usuario, data_inicio, data_fim, tipo, id_categoria)
+    consulta = (
+        select(
+            func.timezone(usuario.fuso, Transacao.data_hora).label("data_local"),
+            Transacao.tipo,
+            Transacao.nome,
+            Categoria.nome.label("categoria"),
+            Transacao.valor,
+            Transacao.forma_pagamento,
+            Transacao.descricao,
+            ContaRecorrente.nome.label("conta_recorrente"),
+        )
+        .outerjoin(Categoria, Categoria.id_categoria == Transacao.id_categoria)
+        .outerjoin(
+            ContaRecorrente,
+            ContaRecorrente.id_conta_recorrente == Transacao.id_conta_recorrente,
+        )
+        .where(*filtros)
+        .order_by(Transacao.data_hora, Transacao.id_transacao)
+    )
+    linhas = (await db.execute(consulta)).all()
+    hoje = await db.scalar(select(cast(func.timezone(usuario.fuso, func.now()), Date)))
+
+    return Response(
+        content=gerar_csv(linhas),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="financas-transacoes-{hoje.isoformat()}.csv"',
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 @router.get("/{id_transacao}", response_model=TransacaoOut)
