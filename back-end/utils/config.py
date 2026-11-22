@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     LOGIN_MAX_FALHAS: int = 5 
     LOGIN_JANELA_MIN: int = 15  
     LOGIN_MAX_FALHAS_IP: int = 20
+    LIMPEZA_INTERVALO_MIN: int = 60
+    TENTATIVAS_RETENCAO_DIAS: int = 30
 
     SECRET_KEY: str
     CORS_ORIGINS: list[str] = []

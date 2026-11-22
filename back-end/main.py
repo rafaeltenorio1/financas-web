@@ -1,3 +1,6 @@
+import asyncio
+from contextlib import asynccontextmanager, suppress
+
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
@@ -8,8 +11,19 @@ from routers import categorias
 from routers import auth
 from routers import transacoes
 from utils.config import settings
+from utils.limpeza import executar_limpeza_periodica
 
-app = FastAPI(title="Finanças", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    tarefa = asyncio.create_task(executar_limpeza_periodica())
+    yield
+    tarefa.cancel()
+    with suppress(asyncio.CancelledError):
+        await tarefa
+
+
+app = FastAPI(title="Finanças", version="0.1.0", lifespan=lifespan)
 
 
 @app.get("/saude")
