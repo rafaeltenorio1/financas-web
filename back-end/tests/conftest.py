@@ -17,7 +17,7 @@ import pytest
 from cryptography.fernet import Fernet
 from testcontainers.community.postgres import PostgresContainer
 
-from apoio import ORIGEM_FRONT, cadastrar, criar_cliente, login
+from apoio import ORIGEM_FRONT, CaixaDeSaida, cadastrar, criar_cliente, login
 
 RAIZ_BACKEND = Path(__file__).resolve().parent.parent
 
@@ -76,6 +76,19 @@ async def limpar_banco():
         await conn.execute(text("DELETE FROM log_tentativa"))
         # O ON DELETE CASCADE remove sessões, transações e categorias do usuário.
         await conn.execute(text("DELETE FROM usuario"))
+
+
+@pytest.fixture(autouse=True)
+async def caixa(monkeypatch):
+    import smtplib
+
+    from utils.email import aguardar_envios
+
+    caixa = CaixaDeSaida()
+    monkeypatch.setattr(smtplib, "SMTP", caixa.smtp)
+    monkeypatch.setattr(smtplib, "SMTP_SSL", caixa.smtp_ssl)
+    yield caixa
+    await aguardar_envios()
 
 
 @pytest.fixture

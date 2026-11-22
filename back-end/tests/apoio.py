@@ -40,3 +40,67 @@ async def obter_csrf(client) -> str:
     resposta = await client.get("/auth/csrf")
     assert resposta.status_code == 200, resposta.text
     return resposta.json()["csrf_token"]
+
+
+class ConexaoSMTPFalsa:
+    def __init__(self, caixa, host, porta, ssl=False, **kwargs):
+        self.caixa = caixa
+        self.host = host
+        self.porta = porta
+        self.ssl = ssl
+        self.starttls_usado = False
+        self.login_usado = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def starttls(self, context=None):
+        self.starttls_usado = True
+
+    def login(self, usuario, senha):
+        self.login_usado = (usuario, senha)
+
+    def send_message(self, mensagem):
+        if self.caixa.falhar:
+            import smtplib
+
+            raise smtplib.SMTPServerDisconnected("conexão perdida")
+        self.caixa.mensagens.append(mensagem)
+
+
+class CaixaDeSaida:
+    def __init__(self):
+        self.mensagens = []
+        self.conexoes = []
+        self.falhar = False
+
+    def _conectar(self, host, porta, ssl=False, **kwargs):
+        conexao = ConexaoSMTPFalsa(self, host, porta, ssl=ssl, **kwargs)
+        self.conexoes.append(conexao)
+        return conexao
+
+    def smtp(self, host, porta, **kwargs):
+        return self._conectar(host, porta, **kwargs)
+
+    def smtp_ssl(self, host, porta, **kwargs):
+        return self._conectar(host, porta, ssl=True, **kwargs)
+
+    async def recebidos(self):
+        from utils.email import aguardar_envios
+
+        await aguardar_envios()
+        return self.mensagens
+
+    async def assuntos(self):
+        return [m["Subject"] for m in await self.recebidos()]
+
+
+def corpo_texto(mensagem) -> str:
+    return mensagem.get_body(preferencelist=("plain",)).get_content()
+
+
+def corpo_html(mensagem) -> str:
+    return mensagem.get_body(preferencelist=("html",)).get_content()
