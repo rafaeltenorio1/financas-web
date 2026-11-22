@@ -16,8 +16,11 @@ class Settings(BaseSettings):
     LOGIN_MAX_FALHAS_IP: int = 20
     LIMPEZA_INTERVALO_MIN: int = 60
     TENTATIVAS_RETENCAO_DIAS: int = 30
+    TOTP_EMISSOR: str = "Finanças"
+    DESAFIO_2FA_MIN: int = 5
 
     SECRET_KEY: str
+    TOTP_CHAVE: str
     CORS_ORIGINS: list[str] = []
 
 

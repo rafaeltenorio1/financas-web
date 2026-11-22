@@ -13,32 +13,72 @@ from utils.config import settings
 from utils.auth import get_usuario_atual
 from utils.tentativas import esta_bloqueado, registrar_tentativa
 from utils.csrf import verificar_origem, verificar_csrf, gerar_csrf
+from utils.totp import (
+    cifrar,
+    gerar_segredo,
+    gerar_uri,
+    substituir_codigos_recuperacao,
+    verificar_segundo_fator,
+    verificar_totp,
+)
 
 from models.usuario import Usuario
 from models.sessao import Sessao
+from models.codigo_recuperacao import CodigoRecuperacao
+from models.desafio_2fa import Desafio2FA
 
 from schemas.usuario import UsuarioOut, UsuarioCreate, UsuarioUpdate
-from schemas.auth import LoginIn, TrocaSenhaIn, MensagemOut, CSRFTokenOut, ExcluirContaIn
+from schemas.auth import (
+    LoginIn,
+    TrocaSenhaIn,
+    MensagemOut,
+    CSRFTokenOut,
+    ExcluirContaIn,
+    CodigoIn,
+    SenhaECodigoIn,
+    Requer2FAOut,
+    Iniciar2FAOut,
+    CodigosRecuperacaoOut,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"], dependencies=[Depends(verificar_origem)])
 
+COOKIE_DESAFIO = "desafio_2fa"
+CAMINHO_COOKIE_DESAFIO = "/auth/login"
+DESAFIO_INVALIDO = HTTPException(status_code=401, detail="Login expirado. Entre novamente.")
+SENHA_OU_CODIGO_INCORRETOS = "Senha ou código incorretos."
+
+
+def _erro_bloqueio(detalhe: str) -> HTTPException:
+    return HTTPException(
+        status_code=429,
+        detail=detalhe,
+        headers={"Retry-After": str(settings.LOGIN_JANELA_MIN * 60)},
+    )
+
 
 async def _confirmar_senha(
-    db: AsyncSession, usuario: Usuario, senha: str, request: Request, erro: str
+    db: AsyncSession,
+    usuario: Usuario,
+    senha: str,
+    request: Request,
+    erro: str,
+    codigo: str | None = None,
+    so_totp: bool = False,
 ) -> None:
     ip = request.client.host
     agora = datetime.now(timezone.utc)
 
     if await esta_bloqueado(db, usuario.email, ip, agora):
-        raise HTTPException(
-            status_code=429,
-            detail="Muitas tentativas. Tente novamente mais tarde.",
-            headers={"Retry-After": str(settings.LOGIN_JANELA_MIN * 60)},
-        )
+        raise _erro_bloqueio("Muitas tentativas. Tente novamente mais tarde.")
 
-    senha_valida = await verificar_senha(senha, usuario.senha_hash)
-    await registrar_tentativa(db, usuario.email, ip, senha_valida, agora)
-    if not senha_valida:
+    valido = await verificar_senha(senha, usuario.senha_hash)
+    if valido and codigo is not None:
+        verificar = verificar_totp if so_totp else verificar_segundo_fator
+        valido = await verificar(db, usuario, codigo, agora)
+
+    await registrar_tentativa(db, usuario.email, ip, valido, agora)
+    if not valido:
         raise HTTPException(status_code=401, detail=erro)
 
 
@@ -49,6 +89,39 @@ def _apagar_cookie(response: Response) -> None:
         httponly=True,
         secure=settings.COOKIE_SECURE,
         samesite="lax",
+    )
+
+
+async def _criar_sessao(
+    db: AsyncSession, response: Response, usuario: Usuario, agora: datetime
+) -> None:
+    token, token_hash = gerar_token()
+    db.add(
+        Sessao(
+            id_usuario=usuario.id_usuario,
+            token_hash=token_hash,
+            expira_em=agora + timedelta(days=settings.SESSAO_DURACAO_DIAS),
+        )
+    )
+    await db.commit()
+
+    response.set_cookie(
+        key="sessao",
+        value=token,
+        max_age=settings.SESSAO_DURACAO_DIAS * 86400,
+        httponly=True,
+        secure=settings.COOKIE_SECURE,
+        samesite="lax",
+        path="/",
+    )
+
+
+async def _apagar_outras_sessoes(db: AsyncSession, usuario: Usuario, token: str | None) -> None:
+    await db.execute(
+        delete(Sessao).where(
+            Sessao.id_usuario == usuario.id_usuario,
+            Sessao.token_hash != hash_token(token or ""),
+        )
     )
 
 
@@ -69,7 +142,7 @@ async def register(dados: UsuarioCreate, db: AsyncSession = Depends(get_db)):
     return novo
 
 
-@router.post("/login", response_model=UsuarioOut)
+@router.post("/login", response_model=UsuarioOut | Requer2FAOut)
 async def login(
     dados: LoginIn,
     request: Request,
@@ -80,39 +153,87 @@ async def login(
     agora = datetime.now(timezone.utc)
 
     if await esta_bloqueado(db, dados.email, ip, agora):
-        raise HTTPException(
-            status_code=429,
-            detail="Muitas tentativas de login. Tente novamente mais tarde.",
-            headers={"Retry-After": str(settings.LOGIN_JANELA_MIN * 60)},
-        )
+        raise _erro_bloqueio("Muitas tentativas de login. Tente novamente mais tarde.")
 
     usuario = await db.scalar(select(Usuario).where(Usuario.email == dados.email))
     hash_armazenado = usuario.senha_hash if usuario else None
     senha_valida = await verificar_senha(dados.senha, hash_armazenado)
     sucesso = usuario is not None and senha_valida
 
-    await registrar_tentativa(db, dados.email, ip, sucesso, agora)
     if not sucesso:
+        await registrar_tentativa(db, dados.email, ip, False, agora)
         raise HTTPException(status_code=401, detail="E-mail ou senha inválidos.")
 
-    token, token_hash = gerar_token()
-    db.add(
-        Sessao(
-            id_usuario=usuario.id_usuario,
-            token_hash=token_hash,
-            expira_em=agora + timedelta(days=settings.SESSAO_DURACAO_DIAS),
+    if usuario.dois_fatores:
+        token, token_hash = gerar_token()
+        db.add(
+            Desafio2FA(
+                id_usuario=usuario.id_usuario,
+                token_hash=token_hash,
+                expira_em=agora + timedelta(minutes=settings.DESAFIO_2FA_MIN),
+            )
+        )
+        await db.commit()
+        response.set_cookie(
+            key=COOKIE_DESAFIO,
+            value=token,
+            max_age=settings.DESAFIO_2FA_MIN * 60,
+            httponly=True,
+            secure=settings.COOKIE_SECURE,
+            samesite="lax",
+            path=CAMINHO_COOKIE_DESAFIO,
+        )
+        return Requer2FAOut()
+
+    await registrar_tentativa(db, dados.email, ip, True, agora)
+    await _criar_sessao(db, response, usuario, agora)
+    return usuario
+
+
+@router.post("/login/2fa", response_model=UsuarioOut)
+async def login_2fa(
+    dados: CodigoIn,
+    request: Request,
+    response: Response,
+    token_desafio: str | None = Cookie(default=None, alias=COOKIE_DESAFIO),
+    db: AsyncSession = Depends(get_db),
+):
+    if not token_desafio:
+        raise DESAFIO_INVALIDO
+
+    agora = datetime.now(timezone.utc)
+    desafio = await db.scalar(
+        select(Desafio2FA).where(
+            Desafio2FA.token_hash == hash_token(token_desafio),
+            Desafio2FA.expira_em > agora,
         )
     )
-    await db.commit()
+    if desafio is None:
+        raise DESAFIO_INVALIDO
 
-    response.set_cookie(
-        key="sessao",
-        value=token,
-        max_age=settings.SESSAO_DURACAO_DIAS * 86400,
+    usuario = await db.get(Usuario, desafio.id_usuario)
+    ip = request.client.host
+
+    if await esta_bloqueado(db, usuario.email, ip, agora):
+        raise _erro_bloqueio("Muitas tentativas de login. Tente novamente mais tarde.")
+
+    codigo_valido = await verificar_segundo_fator(db, usuario, dados.codigo, agora)
+    await registrar_tentativa(db, usuario.email, ip, codigo_valido, agora)
+    if not codigo_valido:
+        raise HTTPException(status_code=401, detail="Código inválido.")
+
+    consumido = await db.execute(
+        delete(Desafio2FA).where(Desafio2FA.id_desafio_2fa == desafio.id_desafio_2fa)
+    )
+    if consumido.rowcount != 1:
+        raise DESAFIO_INVALIDO
+    await _criar_sessao(db, response, usuario, agora)
+    response.delete_cookie(
+        key=COOKIE_DESAFIO,
+        path=CAMINHO_COOKIE_DESAFIO,
         httponly=True,
         secure=settings.COOKIE_SECURE,
         samesite="lax",
-        path="/",
     )
     return usuario
 
@@ -158,12 +279,7 @@ async def trocar_senha(
     await _confirmar_senha(db, usuario, dados.senha_atual, request, "Senha atual incorreta.")
 
     usuario.senha_hash = await gerar_hash(dados.senha_nova)
-    await db.execute(
-        delete(Sessao).where(
-            Sessao.id_usuario == usuario.id_usuario,
-            Sessao.token_hash != hash_token(token),
-        )
-    )
+    await _apagar_outras_sessoes(db, usuario, token)
     await db.commit()
     return MensagemOut(mensagem="Senha alterada com sucesso.")
 
@@ -192,3 +308,96 @@ async def obter_csrf(
     csrf_token = gerar_csrf(token)
     return {"csrf_token": csrf_token}
     
+
+@router.post("/2fa/iniciar", response_model=Iniciar2FAOut, dependencies=[Depends(verificar_csrf)])
+async def iniciar_2fa(
+    response: Response,
+    usuario: Usuario = Depends(get_usuario_atual),
+    db: AsyncSession = Depends(get_db),
+):
+    if usuario.dois_fatores:
+        raise HTTPException(status_code=409, detail="A verificação em duas etapas já está ativa.")
+
+    segredo = gerar_segredo()
+    usuario.totp_segredo = cifrar(segredo)
+    usuario.totp_ultimo_passo = None
+    await db.commit()
+
+    response.headers["Cache-Control"] = "no-store"
+    return Iniciar2FAOut(segredo=segredo, uri=gerar_uri(segredo, usuario.email))
+
+
+@router.post("/2fa/ativar", response_model=CodigosRecuperacaoOut, dependencies=[Depends(verificar_csrf)])
+async def ativar_2fa(
+    dados: SenhaECodigoIn,
+    request: Request,
+    response: Response,
+    usuario: Usuario = Depends(get_usuario_atual),
+    token: str | None = Cookie(default=None, alias="sessao"),
+    db: AsyncSession = Depends(get_db),
+):
+    if usuario.dois_fatores:
+        raise HTTPException(status_code=409, detail="A verificação em duas etapas já está ativa.")
+    if usuario.totp_segredo is None:
+        raise HTTPException(status_code=409, detail="Inicie a configuração antes de ativar.")
+
+    await _confirmar_senha(
+        db, usuario, dados.senha, request, SENHA_OU_CODIGO_INCORRETOS, dados.codigo, so_totp=True
+    )
+
+    usuario.totp_ativado_em = datetime.now(timezone.utc)
+    codigos = await substituir_codigos_recuperacao(db, usuario)
+    await _apagar_outras_sessoes(db, usuario, token)
+    await db.commit()
+
+    response.headers["Cache-Control"] = "no-store"
+    return CodigosRecuperacaoOut(codigos=codigos)
+
+
+@router.post("/2fa/desativar", response_model=MensagemOut, dependencies=[Depends(verificar_csrf)])
+async def desativar_2fa(
+    dados: SenhaECodigoIn,
+    request: Request,
+    usuario: Usuario = Depends(get_usuario_atual),
+    token: str | None = Cookie(default=None, alias="sessao"),
+    db: AsyncSession = Depends(get_db),
+):
+    if not usuario.dois_fatores:
+        raise HTTPException(status_code=409, detail="A verificação em duas etapas não está ativa.")
+
+    await _confirmar_senha(db, usuario, dados.senha, request, SENHA_OU_CODIGO_INCORRETOS, dados.codigo)
+
+    usuario.totp_segredo = None
+    usuario.totp_ativado_em = None
+    usuario.totp_ultimo_passo = None
+    await db.execute(
+        delete(CodigoRecuperacao).where(CodigoRecuperacao.id_usuario == usuario.id_usuario)
+    )
+    await db.execute(delete(Desafio2FA).where(Desafio2FA.id_usuario == usuario.id_usuario))
+    await _apagar_outras_sessoes(db, usuario, token)
+    await db.commit()
+    return MensagemOut(mensagem="Verificação em duas etapas desativada.")
+
+
+@router.post(
+    "/2fa/codigos-recuperacao",
+    response_model=CodigosRecuperacaoOut,
+    dependencies=[Depends(verificar_csrf)],
+)
+async def gerar_novos_codigos_recuperacao(
+    dados: SenhaECodigoIn,
+    request: Request,
+    response: Response,
+    usuario: Usuario = Depends(get_usuario_atual),
+    db: AsyncSession = Depends(get_db),
+):
+    if not usuario.dois_fatores:
+        raise HTTPException(status_code=409, detail="A verificação em duas etapas não está ativa.")
+
+    await _confirmar_senha(db, usuario, dados.senha, request, SENHA_OU_CODIGO_INCORRETOS, dados.codigo)
+
+    codigos = await substituir_codigos_recuperacao(db, usuario)
+    await db.commit()
+
+    response.headers["Cache-Control"] = "no-store"
+    return CodigosRecuperacaoOut(codigos=codigos)

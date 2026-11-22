@@ -1,6 +1,6 @@
-from typing import Annotated
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, BeforeValidator, Field
+from pydantic import BaseModel, BeforeValidator, Field, StringConstraints
 
 from schemas.usuario import normalizar_email
 
@@ -25,3 +25,29 @@ class MensagemOut(BaseModel):
 
 class CSRFTokenOut(BaseModel):
     csrf_token: str = Field(..., examples=["token_aqui"])
+
+CodigoSegundoFator = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=6, max_length=32)
+]
+
+
+class CodigoIn(BaseModel):
+    codigo: CodigoSegundoFator
+
+
+class SenhaECodigoIn(BaseModel):
+    senha: str = Field(max_length=128)
+    codigo: CodigoSegundoFator
+
+
+class Requer2FAOut(BaseModel):
+    requer_2fa: Literal[True] = True
+
+
+class Iniciar2FAOut(BaseModel):
+    segredo: str
+    uri: str
+
+
+class CodigosRecuperacaoOut(BaseModel):
+    codigos: list[str]

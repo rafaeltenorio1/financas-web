@@ -30,3 +30,4 @@ class UsuarioOut(BaseModel):
     id_usuario: uuid.UUID
     nome: str
     email: str
+    dois_fatores: bool
