@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, false, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database import Base
@@ -15,6 +15,7 @@ class Desafio2FA(Base):
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     expira_em: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    lembrar: Mapped[bool] = mapped_column(default=False, server_default=false())
 
     __table_args__ = (
         CheckConstraint("expira_em > criado_em", name="check_desafio_expira_em_maior_que_criado_em"),

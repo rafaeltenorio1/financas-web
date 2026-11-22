@@ -13,6 +13,18 @@ from utils.security import hash_token
 NAO_AUTENTICADO = HTTPException(status_code=401, detail="Não autenticado.")
 
 
+def inatividade_maxima(lembrar: bool) -> timedelta:
+    if lembrar:
+        return timedelta(days=settings.SESSAO_LEMBRAR_INATIVIDADE_DIAS)
+    return timedelta(minutes=settings.SESSAO_INATIVIDADE_MIN)
+
+
+def duracao_maxima(lembrar: bool) -> timedelta:
+    if lembrar:
+        return timedelta(days=settings.SESSAO_LEMBRAR_DURACAO_DIAS)
+    return timedelta(days=settings.SESSAO_DURACAO_DIAS)
+
+
 async def get_usuario_atual(
     token: str | None = Cookie(default=None, alias="sessao"),
     db: AsyncSession = Depends(get_db),
@@ -27,7 +39,7 @@ async def get_usuario_atual(
         raise NAO_AUTENTICADO
 
     agora = datetime.now(timezone.utc)
-    inativa = agora - sessao.ultimo_acesso_em > timedelta(minutes=settings.SESSAO_INATIVIDADE_MIN)
+    inativa = agora - sessao.ultimo_acesso_em > inatividade_maxima(sessao.lembrar)
     if sessao.expira_em <= agora or inativa:
         await db.delete(sessao)
         await db.commit()

@@ -8,6 +8,7 @@ from schemas.usuario import normalizar_email
 class LoginIn(BaseModel):
     email: Annotated[str, BeforeValidator(normalizar_email), Field(max_length=255)]
     senha: str = Field(max_length=128)
+    lembrar: bool = False
 
 
 class TrocaSenhaIn(BaseModel):

@@ -10,7 +10,7 @@ from database import get_db
 
 from utils.security import gerar_hash, verificar_senha, gerar_token, hash_token
 from utils.config import settings
-from utils.auth import get_usuario_atual
+from utils.auth import duracao_maxima, get_usuario_atual
 from utils.tentativas import esta_bloqueado, registrar_tentativa
 from utils.csrf import verificar_origem, verificar_csrf, gerar_csrf
 from utils.totp import (
@@ -93,14 +93,16 @@ def _apagar_cookie(response: Response) -> None:
 
 
 async def _criar_sessao(
-    db: AsyncSession, response: Response, usuario: Usuario, agora: datetime
+    db: AsyncSession, response: Response, usuario: Usuario, agora: datetime, lembrar: bool
 ) -> None:
     token, token_hash = gerar_token()
+    duracao = duracao_maxima(lembrar)
     db.add(
         Sessao(
             id_usuario=usuario.id_usuario,
             token_hash=token_hash,
-            expira_em=agora + timedelta(days=settings.SESSAO_DURACAO_DIAS),
+            expira_em=agora + duracao,
+            lembrar=lembrar,
         )
     )
     await db.commit()
@@ -108,7 +110,7 @@ async def _criar_sessao(
     response.set_cookie(
         key="sessao",
         value=token,
-        max_age=settings.SESSAO_DURACAO_DIAS * 86400,
+        max_age=int(duracao.total_seconds()) if lembrar else None,
         httponly=True,
         secure=settings.COOKIE_SECURE,
         samesite="lax",
@@ -171,6 +173,7 @@ async def login(
                 id_usuario=usuario.id_usuario,
                 token_hash=token_hash,
                 expira_em=agora + timedelta(minutes=settings.DESAFIO_2FA_MIN),
+                lembrar=dados.lembrar,
             )
         )
         await db.commit()
@@ -186,7 +189,7 @@ async def login(
         return Requer2FAOut()
 
     await registrar_tentativa(db, dados.email, ip, True, agora)
-    await _criar_sessao(db, response, usuario, agora)
+    await _criar_sessao(db, response, usuario, agora, dados.lembrar)
     return usuario
 
 
@@ -227,7 +230,7 @@ async def login_2fa(
     )
     if consumido.rowcount != 1:
         raise DESAFIO_INVALIDO
-    await _criar_sessao(db, response, usuario, agora)
+    await _criar_sessao(db, response, usuario, agora, desafio.lembrar)
     response.delete_cookie(
         key=COOKIE_DESAFIO,
         path=CAMINHO_COOKIE_DESAFIO,

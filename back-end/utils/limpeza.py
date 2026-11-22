@@ -2,27 +2,34 @@ import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import delete, or_
+from sqlalchemy import and_, delete, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import database
 from models.desafio_2fa import Desafio2FA
 from models.log_tentativa import LogTentativa
 from models.sessao import Sessao
+from utils.auth import inatividade_maxima
 from utils.config import settings
 
 logger = logging.getLogger(__name__)
 
 
 async def limpar_dados_vencidos(db: AsyncSession, agora: datetime) -> tuple[int, int, int]:
-    limite_inatividade = agora - timedelta(minutes=settings.SESSAO_INATIVIDADE_MIN)
     limite_tentativas = agora - timedelta(days=settings.TENTATIVAS_RETENCAO_DIAS)
 
     sessoes = await db.execute(
         delete(Sessao).where(
             or_(
                 Sessao.expira_em <= agora,
-                Sessao.ultimo_acesso_em < limite_inatividade,
+                and_(
+                    Sessao.lembrar.is_(False),
+                    Sessao.ultimo_acesso_em < agora - inatividade_maxima(False),
+                ),
+                and_(
+                    Sessao.lembrar.is_(True),
+                    Sessao.ultimo_acesso_em < agora - inatividade_maxima(True),
+                ),
             )
         )
     )
