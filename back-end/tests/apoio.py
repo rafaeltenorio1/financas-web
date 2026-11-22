@@ -97,6 +97,21 @@ class CaixaDeSaida:
     async def assuntos(self):
         return [m["Subject"] for m in await self.recebidos()]
 
+    async def esvaziar(self):
+        await self.recebidos()
+        self.mensagens.clear()
+        self.conexoes.clear()
+
+    async def token_enviado(self, para: str) -> str:
+        import re
+
+        for mensagem in reversed(await self.recebidos()):
+            if mensagem["To"] == para:
+                encontrado = re.search(r"[?&]token=([A-Za-z0-9_-]+)", corpo_texto(mensagem))
+                if encontrado:
+                    return encontrado.group(1)
+        raise AssertionError(f"nenhum link com token enviado para {para}")
+
 
 def corpo_texto(mensagem) -> str:
     return mensagem.get_body(preferencelist=("plain",)).get_content()
@@ -104,3 +119,16 @@ def corpo_texto(mensagem) -> str:
 
 def corpo_html(mensagem) -> str:
     return mensagem.get_body(preferencelist=("html",)).get_content()
+
+
+async def marcar_verificado(email="ana@example.com"):
+    import database
+    from sqlalchemy import func, update
+
+    from models.usuario import Usuario
+
+    async with database.SessionLocal() as db:
+        await db.execute(
+            update(Usuario).where(Usuario.email == email).values(email_verificado_em=func.now())
+        )
+        await db.commit()

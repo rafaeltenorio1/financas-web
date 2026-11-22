@@ -2,7 +2,15 @@ import pyotp
 import pytest
 from sqlalchemy import update
 
-from apoio import SENHA_PADRAO, cadastrar, corpo_texto, criar_cliente, login, obter_csrf
+from apoio import (
+    SENHA_PADRAO,
+    cadastrar,
+    corpo_texto,
+    criar_cliente,
+    login,
+    marcar_verificado,
+    obter_csrf,
+)
 
 
 async def _post_csrf(client, url, dados):
@@ -18,6 +26,19 @@ async def _liberar_passo(db):
 
 
 @pytest.fixture
+async def logado(logado, caixa):
+    await marcar_verificado()
+    await caixa.esvaziar()
+    return logado
+
+
+async def _cadastrar_verificado(client, caixa, email="ana@example.com"):
+    await cadastrar(client, email=email)
+    await marcar_verificado(email)
+    await caixa.esvaziar()
+
+
+@pytest.fixture
 async def com_2fa(logado, db, caixa):
     csrf = await obter_csrf(logado)
     segredo = (await logado.post("/auth/2fa/iniciar", headers={"X-CSRF-Token": csrf})).json()[
@@ -28,14 +49,28 @@ async def com_2fa(logado, db, caixa):
     )
     assert resposta.status_code == 200, resposta.text
     await _liberar_passo(db)
-    await caixa.recebidos()
-    caixa.mensagens.clear()
+    await caixa.esvaziar()
     return segredo
 
 
-async def test_cadastro_e_login_nao_enviam_email(client, caixa):
-    await cadastrar(client)
+async def test_login_nao_envia_email(client, caixa):
+    await _cadastrar_verificado(client, caixa)
     assert (await login(client)).status_code == 200
+
+    assert await caixa.recebidos() == []
+
+
+async def test_alerta_nao_vai_para_email_nao_verificado(client, caixa):
+    await cadastrar(client)
+    await login(client)
+    await caixa.esvaziar()
+
+    resposta = await _post_csrf(
+        client,
+        "/auth/trocar-senha",
+        {"senha_atual": SENHA_PADRAO, "senha_nova": "outra-senha-456"},
+    )
+    assert resposta.status_code == 200
 
     assert await caixa.recebidos() == []
 
@@ -115,7 +150,7 @@ async def test_excluir_conta_avisa_por_email(logado, caixa):
 async def test_bloqueio_no_login_avisa_uma_vez_so(client, caixa):
     from utils.config import settings
 
-    await cadastrar(client)
+    await _cadastrar_verificado(client, caixa)
     for _ in range(settings.LOGIN_MAX_FALHAS - 1):
         assert (await login(client, senha="senha-errada-1")).status_code == 401
     assert await caixa.recebidos() == []
@@ -141,7 +176,7 @@ async def test_bloqueio_por_ip_nao_avisa_os_donos_dos_emails(client, caixa, monk
 
     monkeypatch.setattr(settings, "LOGIN_MAX_FALHAS_IP", 3)
     for i in range(4):
-        await cadastrar(client, email=f"pessoa{i}@example.com")
+        await _cadastrar_verificado(client, caixa, email=f"pessoa{i}@example.com")
     for i in range(3):
         assert (await login(client, email=f"pessoa{i}@example.com", senha="senha-errada-1")).status_code == 401
 

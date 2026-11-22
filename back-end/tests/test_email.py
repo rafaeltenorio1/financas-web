@@ -1,6 +1,6 @@
 import logging
 
-from apoio import SENHA_PADRAO, corpo_html, corpo_texto, obter_csrf
+from apoio import SENHA_PADRAO, corpo_html, corpo_texto, marcar_verificado, obter_csrf
 
 
 def _conteudo(nome="Ana"):
@@ -91,6 +91,8 @@ async def test_falha_no_smtp_devolve_false_e_nao_vaza_dados_no_log(caixa, caplog
 
 
 async def test_falha_no_smtp_nao_quebra_a_rota(logado, caixa):
+    await marcar_verificado()
+    await caixa.esvaziar()
     caixa.falhar = True
     csrf = await obter_csrf(logado)
 
@@ -102,3 +104,4 @@ async def test_falha_no_smtp_nao_quebra_a_rota(logado, caixa):
 
     assert resposta.status_code == 200
     assert await caixa.recebidos() == []
+    assert len(caixa.conexoes) == 1
