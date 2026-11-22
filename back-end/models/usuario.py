@@ -2,6 +2,7 @@ import uuid
 from datetime import date, datetime
 
 from sqlalchemy import BigInteger, CheckConstraint, Date, DateTime, String, true
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, validates
 
 from database import Base
@@ -26,6 +27,7 @@ class Usuario(Base):
     lembrete_atraso: Mapped[bool] = mapped_column(default=True, server_default=true())
     resumo_mensal: Mapped[bool] = mapped_column(default=True, server_default=true())
     resumo_enviado_mes: Mapped[date | None] = mapped_column(Date)
+    preferencias_painel: Mapped[dict | None] = mapped_column(JSONB)
 
     __table_args__ = (
         CheckConstraint(
