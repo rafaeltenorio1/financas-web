@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     SMTP_TIMEOUT_S: int = 10
     EMAIL_REMETENTE: str = "Finanças <nao-responda@localhost>"
 
+    FRONT_URL: str = "http://localhost:5500"
+    TOKEN_VERIFICACAO_HORAS: int = 24
+    TOKEN_REDEFINIR_SENHA_MIN: int = 30
+    TOKEN_TROCAR_EMAIL_MIN: int = 60
+    TOKEN_INTERVALO_ENVIO_MIN: int = 2
+
     SECRET_KEY: str
     TOTP_CHAVE: str
     CORS_ORIGINS: list[str] = []

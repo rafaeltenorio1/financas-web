@@ -9,13 +9,14 @@ import database
 from models.desafio_2fa import Desafio2FA
 from models.log_tentativa import LogTentativa
 from models.sessao import Sessao
+from models.token_email import TokenEmail
 from utils.auth import inatividade_maxima
 from utils.config import settings
 
 logger = logging.getLogger(__name__)
 
 
-async def limpar_dados_vencidos(db: AsyncSession, agora: datetime) -> tuple[int, int, int]:
+async def limpar_dados_vencidos(db: AsyncSession, agora: datetime) -> tuple[int, int, int, int]:
     limite_tentativas = agora - timedelta(days=settings.TENTATIVAS_RETENCAO_DIAS)
 
     sessoes = await db.execute(
@@ -37,9 +38,10 @@ async def limpar_dados_vencidos(db: AsyncSession, agora: datetime) -> tuple[int,
         delete(LogTentativa).where(LogTentativa.ocorrida_em < limite_tentativas)
     )
     desafios = await db.execute(delete(Desafio2FA).where(Desafio2FA.expira_em <= agora))
+    tokens = await db.execute(delete(TokenEmail).where(TokenEmail.expira_em <= agora))
     await db.commit()
 
-    return sessoes.rowcount, tentativas.rowcount, desafios.rowcount
+    return sessoes.rowcount, tentativas.rowcount, desafios.rowcount, tokens.rowcount
 
 
 async def executar_limpeza_periodica() -> None:
@@ -48,5 +50,5 @@ async def executar_limpeza_periodica() -> None:
             async with database.SessionLocal() as db:
                 await limpar_dados_vencidos(db, datetime.now(timezone.utc))
         except Exception:
-            logger.exception("Falha na limpeza de sessões e tentativas.")
+            logger.exception("Falha na limpeza de dados vencidos.")
         await asyncio.sleep(settings.LIMPEZA_INTERVALO_MIN * 60)

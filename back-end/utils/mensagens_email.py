@@ -8,10 +8,29 @@ AVISO_NAO_FOI_VOCE = (
 )
 
 
-def _montar(assunto: str, nome: str, paragrafos: list[str]) -> ConteudoEmail:
-    texto = "\n\n".join([f"Olá, {nome}.", *paragrafos, "Finanças"])
+def mascarar_email(email: str) -> str:
+    local, _, dominio = email.partition("@")
+    return f"{local[:1]}***@{dominio}"
 
+
+def _montar(
+    assunto: str, nome: str, paragrafos: list[str], botao: tuple[str, str] | None = None
+) -> ConteudoEmail:
+    linhas_texto = [f"Olá, {nome}.", *paragrafos]
     blocos = "".join(f'<p style="margin:0 0 16px">{escape(p)}</p>' for p in paragrafos)
+
+    if botao is not None:
+        rotulo, link = botao
+        linhas_texto.append(f"{rotulo}: {link}")
+        blocos += (
+            f'<p style="margin:24px 0"><a href="{escape(link)}" style="background:#235347;'
+            'color:#DAF1DE;padding:12px 20px;border-radius:8px;text-decoration:none;'
+            f'font-weight:600">{escape(rotulo)}</a></p>'
+            '<p style="margin:0 0 16px;font-size:12px;color:#235347">'
+            f"Se o botão não funcionar, copie este endereço no navegador: {escape(link)}</p>"
+        )
+
+    texto = "\n\n".join([*linhas_texto, "Finanças"])
     html = (
         '<!doctype html><html lang="pt-BR"><body style="margin:0;padding:24px;'
         "background:#DAF1DE;font-family:'Plus Jakarta Sans',Arial,sans-serif;color:#051F20\">"
@@ -95,4 +114,73 @@ def bloqueio_por_tentativas(nome: str) -> ConteudoEmail:
             "adivinhar sua senha: troque-a assim que conseguir entrar e ative a verificação "
             "em duas etapas.",
         ],
+    )
+
+
+def verificacao_email(nome: str, link: str) -> ConteudoEmail:
+    return _montar(
+        "Confirme seu e-mail",
+        nome,
+        [
+            "Confirme que este endereço é seu para receber avisos e lembretes do Finanças. "
+            f"O link vale por {settings.TOKEN_VERIFICACAO_HORAS} horas.",
+            "Se você não criou uma conta, ignore este e-mail.",
+        ],
+        ("Confirmar e-mail", link),
+    )
+
+
+def redefinir_senha(nome: str, link: str) -> ConteudoEmail:
+    return _montar(
+        "Redefinição de senha",
+        nome,
+        [
+            "Recebemos um pedido para redefinir a senha da sua conta. "
+            f"O link vale por {settings.TOKEN_REDEFINIR_SENHA_MIN} minutos e só pode ser usado uma vez.",
+            "Se não foi você, ignore este e-mail: sua senha continua a mesma.",
+        ],
+        ("Redefinir senha", link),
+    )
+
+
+def senha_redefinida(nome: str, ip: str) -> ConteudoEmail:
+    return _alerta(
+        "Sua senha foi redefinida",
+        nome,
+        "A senha da sua conta foi redefinida pelo link enviado por e-mail "
+        "e todas as sessões abertas foram encerradas.",
+        ip,
+    )
+
+
+def confirmar_troca_email(nome: str, link: str) -> ConteudoEmail:
+    return _montar(
+        "Confirme seu novo e-mail",
+        nome,
+        [
+            "Recebemos um pedido para usar este endereço na sua conta do Finanças. "
+            f"O link vale por {settings.TOKEN_TROCAR_EMAIL_MIN} minutos.",
+            "Se você não pediu essa troca, ignore este e-mail.",
+        ],
+        ("Confirmar novo e-mail", link),
+    )
+
+
+def troca_email_solicitada(nome: str, email_novo: str, ip: str) -> ConteudoEmail:
+    return _alerta(
+        "Pedido de troca de e-mail",
+        nome,
+        f"Foi pedida a troca do e-mail da sua conta para {mascarar_email(email_novo)}. "
+        "A troca só acontece depois da confirmação no novo endereço.",
+        ip,
+    )
+
+
+def email_trocado(nome: str, email_novo: str, ip: str) -> ConteudoEmail:
+    return _alerta(
+        "O e-mail da sua conta foi trocado",
+        nome,
+        f"O e-mail da sua conta agora é {mascarar_email(email_novo)}. "
+        "Os próximos avisos irão para o novo endereço.",
+        ip,
     )

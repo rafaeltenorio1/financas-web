@@ -13,8 +13,9 @@ from utils.config import settings
 from utils.auth import duracao_maxima, get_usuario_atual
 from utils.tentativas import esta_bloqueado, registrar_tentativa
 from utils.csrf import verificar_origem, verificar_csrf, gerar_csrf
-from utils.email import agendar_envio
+from utils.email import ConteudoEmail, agendar_envio
 from utils import mensagens_email
+from utils.tokens_email import apagar_tokens_do_usuario, consumir_token, criar_token, montar_link
 from utils.totp import (
     cifrar,
     gerar_segredo,
@@ -28,6 +29,7 @@ from models.usuario import Usuario
 from models.sessao import Sessao
 from models.codigo_recuperacao import CodigoRecuperacao
 from models.desafio_2fa import Desafio2FA
+from models.enums import FinalidadeToken
 
 from schemas.usuario import UsuarioOut, UsuarioCreate, UsuarioUpdate
 from schemas.auth import (
@@ -41,6 +43,10 @@ from schemas.auth import (
     Requer2FAOut,
     Iniciar2FAOut,
     CodigosRecuperacaoOut,
+    TokenIn,
+    EsqueciSenhaIn,
+    RedefinirSenhaIn,
+    TrocarEmailIn,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"], dependencies=[Depends(verificar_origem)])
@@ -49,6 +55,7 @@ COOKIE_DESAFIO = "desafio_2fa"
 CAMINHO_COOKIE_DESAFIO = "/auth/login"
 DESAFIO_INVALIDO = HTTPException(status_code=401, detail="Login expirado. Entre novamente.")
 SENHA_OU_CODIGO_INCORRETOS = "Senha ou código incorretos."
+LINK_INVALIDO = HTTPException(status_code=400, detail="Link inválido ou expirado.")
 
 
 def _erro_bloqueio(detalhe: str) -> HTTPException:
@@ -85,8 +92,24 @@ async def _confirmar_senha(
         raise HTTPException(status_code=401, detail=erro)
 
 
+def _notificar(usuario: Usuario, conteudo: ConteudoEmail) -> None:
+    if usuario.email_verificado:
+        agendar_envio(usuario.email, conteudo)
+
+
 def _avisar_bloqueio(usuario: Usuario) -> None:
-    agendar_envio(usuario.email, mensagens_email.bloqueio_por_tentativas(usuario.nome))
+    _notificar(usuario, mensagens_email.bloqueio_por_tentativas(usuario.nome))
+
+
+async def _enviar_verificacao(db: AsyncSession, usuario: Usuario) -> bool:
+    finalidade = FinalidadeToken.VERIFICACAO
+    token = await criar_token(db, usuario, finalidade, datetime.now(timezone.utc))
+    if token is None:
+        return False
+    agendar_envio(
+        usuario.email, mensagens_email.verificacao_email(usuario.nome, montar_link(finalidade, token))
+    )
+    return True
 
 
 def _apagar_cookie(response: Response) -> None:
@@ -148,6 +171,7 @@ async def register(dados: UsuarioCreate, db: AsyncSession = Depends(get_db)):
         await db.rollback()
         raise HTTPException(status_code=409, detail="Não foi possível concluir o cadastro.")
     await db.refresh(novo)
+    await _enviar_verificacao(db, novo)
     return novo
 
 
@@ -293,7 +317,7 @@ async def trocar_senha(
     usuario.senha_hash = await gerar_hash(dados.senha_nova)
     await _apagar_outras_sessoes(db, usuario, token)
     await db.commit()
-    agendar_envio(usuario.email, mensagens_email.senha_trocada(usuario.nome, request.client.host))
+    _notificar(usuario, mensagens_email.senha_trocada(usuario.nome, request.client.host))
     return MensagemOut(mensagem="Senha alterada com sucesso.")
 
 
@@ -307,11 +331,12 @@ async def excluir_conta(
 ):
     await _confirmar_senha(db, usuario, dados.senha, request, "Senha incorreta.")
 
-    email, nome = usuario.email, usuario.nome
+    email, nome, verificado = usuario.email, usuario.nome, usuario.email_verificado
     await db.delete(usuario)
     await db.commit()
     _apagar_cookie(response)
-    agendar_envio(email, mensagens_email.conta_excluida(nome, request.client.host))
+    if verificado:
+        agendar_envio(email, mensagens_email.conta_excluida(nome, request.client.host))
 
 
 @router.get("/csrf", response_model=CSRFTokenOut, dependencies=[Depends(get_usuario_atual)])
@@ -364,9 +389,7 @@ async def ativar_2fa(
     codigos = await substituir_codigos_recuperacao(db, usuario)
     await _apagar_outras_sessoes(db, usuario, token)
     await db.commit()
-    agendar_envio(
-        usuario.email, mensagens_email.dois_fatores_ativado(usuario.nome, request.client.host)
-    )
+    _notificar(usuario, mensagens_email.dois_fatores_ativado(usuario.nome, request.client.host))
 
     response.headers["Cache-Control"] = "no-store"
     return CodigosRecuperacaoOut(codigos=codigos)
@@ -394,9 +417,7 @@ async def desativar_2fa(
     await db.execute(delete(Desafio2FA).where(Desafio2FA.id_usuario == usuario.id_usuario))
     await _apagar_outras_sessoes(db, usuario, token)
     await db.commit()
-    agendar_envio(
-        usuario.email, mensagens_email.dois_fatores_desativado(usuario.nome, request.client.host)
-    )
+    _notificar(usuario, mensagens_email.dois_fatores_desativado(usuario.nome, request.client.host))
     return MensagemOut(mensagem="Verificação em duas etapas desativada.")
 
 
@@ -419,9 +440,164 @@ async def gerar_novos_codigos_recuperacao(
 
     codigos = await substituir_codigos_recuperacao(db, usuario)
     await db.commit()
-    agendar_envio(
-        usuario.email, mensagens_email.codigos_recuperacao_gerados(usuario.nome, request.client.host)
-    )
+    _notificar(usuario, mensagens_email.codigos_recuperacao_gerados(usuario.nome, request.client.host))
 
     response.headers["Cache-Control"] = "no-store"
     return CodigosRecuperacaoOut(codigos=codigos)
+
+
+@router.post(
+    "/verificar-email/reenviar",
+    status_code=202,
+    response_model=MensagemOut,
+    dependencies=[Depends(verificar_csrf)],
+)
+async def reenviar_verificacao(
+    usuario: Usuario = Depends(get_usuario_atual),
+    db: AsyncSession = Depends(get_db),
+):
+    if usuario.email_verificado:
+        raise HTTPException(status_code=409, detail="O e-mail já está verificado.")
+    if not await _enviar_verificacao(db, usuario):
+        raise HTTPException(
+            status_code=429,
+            detail="Aguarde alguns minutos antes de pedir outro e-mail.",
+            headers={"Retry-After": str(settings.TOKEN_INTERVALO_ENVIO_MIN * 60)},
+        )
+    return MensagemOut(mensagem="Enviamos um novo link de confirmação.")
+
+
+@router.post("/verificar-email", response_model=MensagemOut)
+async def verificar_email(dados: TokenIn, db: AsyncSession = Depends(get_db)):
+    agora = datetime.now(timezone.utc)
+    consumido = await consumir_token(db, dados.token, FinalidadeToken.VERIFICACAO, agora)
+    if consumido is None:
+        raise LINK_INVALIDO
+
+    usuario = await db.get(Usuario, consumido.id_usuario)
+    if usuario.email_verificado_em is None:
+        usuario.email_verificado_em = agora
+    await db.commit()
+    return MensagemOut(mensagem="E-mail confirmado.")
+
+
+@router.post("/esqueci-senha", status_code=202, response_model=MensagemOut)
+async def esqueci_senha(dados: EsqueciSenhaIn, db: AsyncSession = Depends(get_db)):
+    usuario = await db.scalar(select(Usuario).where(Usuario.email == dados.email))
+    if usuario is not None:
+        finalidade = FinalidadeToken.REDEFINIR_SENHA
+        token = await criar_token(db, usuario, finalidade, datetime.now(timezone.utc))
+        if token is not None:
+            agendar_envio(
+                usuario.email,
+                mensagens_email.redefinir_senha(usuario.nome, montar_link(finalidade, token)),
+            )
+    return MensagemOut(
+        mensagem="Se o e-mail estiver cadastrado, enviaremos um link para redefinir a senha."
+    )
+
+
+@router.post("/redefinir-senha", response_model=MensagemOut)
+async def redefinir_senha(
+    dados: RedefinirSenhaIn,
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    agora = datetime.now(timezone.utc)
+    consumido = await consumir_token(db, dados.token, FinalidadeToken.REDEFINIR_SENHA, agora)
+    if consumido is None:
+        raise LINK_INVALIDO
+
+    usuario = await db.get(Usuario, consumido.id_usuario)
+    usuario.senha_hash = await gerar_hash(dados.senha_nova)
+    if usuario.email_verificado_em is None:
+        usuario.email_verificado_em = agora
+    await db.execute(delete(Sessao).where(Sessao.id_usuario == usuario.id_usuario))
+    await db.execute(delete(Desafio2FA).where(Desafio2FA.id_usuario == usuario.id_usuario))
+    await registrar_tentativa(db, usuario.email, request.client.host, True, agora)
+
+    _apagar_cookie(response)
+    _notificar(usuario, mensagens_email.senha_redefinida(usuario.nome, request.client.host))
+    return MensagemOut(mensagem="Senha redefinida. Entre com a nova senha.")
+
+
+@router.post(
+    "/trocar-email",
+    status_code=202,
+    response_model=MensagemOut,
+    dependencies=[Depends(verificar_csrf)],
+)
+async def trocar_email(
+    dados: TrocarEmailIn,
+    request: Request,
+    usuario: Usuario = Depends(get_usuario_atual),
+    db: AsyncSession = Depends(get_db),
+):
+    if usuario.dois_fatores and dados.codigo is None:
+        raise HTTPException(
+            status_code=400, detail="Informe o código da verificação em duas etapas."
+        )
+    if dados.email_novo == usuario.email:
+        raise HTTPException(status_code=400, detail="O novo e-mail é igual ao atual.")
+
+    if usuario.dois_fatores:
+        await _confirmar_senha(
+            db, usuario, dados.senha, request, SENHA_OU_CODIGO_INCORRETOS, dados.codigo
+        )
+    else:
+        await _confirmar_senha(db, usuario, dados.senha, request, "Senha incorreta.")
+
+    em_uso = await db.scalar(select(Usuario.id_usuario).where(Usuario.email == dados.email_novo))
+    if em_uso is None:
+        finalidade = FinalidadeToken.TROCAR_EMAIL
+        token = await criar_token(
+            db, usuario, finalidade, datetime.now(timezone.utc), email_novo=dados.email_novo
+        )
+        if token is not None:
+            agendar_envio(
+                dados.email_novo,
+                mensagens_email.confirmar_troca_email(usuario.nome, montar_link(finalidade, token)),
+            )
+            _notificar(
+                usuario,
+                mensagens_email.troca_email_solicitada(
+                    usuario.nome, dados.email_novo, request.client.host
+                ),
+            )
+    return MensagemOut(
+        mensagem="Se o endereço estiver disponível, enviaremos um link de confirmação para ele."
+    )
+
+
+@router.post("/trocar-email/confirmar", response_model=MensagemOut)
+async def confirmar_troca_email(
+    dados: TokenIn,
+    request: Request,
+    token_sessao: str | None = Cookie(default=None, alias="sessao"),
+    db: AsyncSession = Depends(get_db),
+):
+    agora = datetime.now(timezone.utc)
+    consumido = await consumir_token(db, dados.token, FinalidadeToken.TROCAR_EMAIL, agora)
+    if consumido is None:
+        raise LINK_INVALIDO
+
+    usuario = await db.get(Usuario, consumido.id_usuario)
+    email_antigo, avisar_antigo = usuario.email, usuario.email_verificado
+    usuario.email = consumido.email_novo
+    usuario.email_verificado_em = agora
+    try:
+        await db.flush()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="Este e-mail já está em uso.")
+    await apagar_tokens_do_usuario(db, usuario)
+    await _apagar_outras_sessoes(db, usuario, token_sessao)
+    await db.commit()
+
+    if avisar_antigo:
+        agendar_envio(
+            email_antigo,
+            mensagens_email.email_trocado(usuario.nome, usuario.email, request.client.host),
+        )
+    return MensagemOut(mensagem="E-mail alterado.")

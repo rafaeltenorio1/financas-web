@@ -2,7 +2,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, BeforeValidator, Field, StringConstraints
 
-from schemas.usuario import normalizar_email
+from schemas.usuario import EmailNormalizado, normalizar_email
 
 
 class LoginIn(BaseModel):
@@ -52,3 +52,25 @@ class Iniciar2FAOut(BaseModel):
 
 class CodigosRecuperacaoOut(BaseModel):
     codigos: list[str]
+
+
+TokenEmailStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=128)]
+
+
+class TokenIn(BaseModel):
+    token: TokenEmailStr
+
+
+class EsqueciSenhaIn(BaseModel):
+    email: EmailNormalizado
+
+
+class RedefinirSenhaIn(BaseModel):
+    token: TokenEmailStr
+    senha_nova: str = Field(min_length=8, max_length=128)
+
+
+class TrocarEmailIn(BaseModel):
+    senha: str = Field(max_length=128)
+    codigo: CodigoSegundoFator | None = None
+    email_novo: EmailNormalizado

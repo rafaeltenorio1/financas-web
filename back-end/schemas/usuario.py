@@ -31,3 +31,4 @@ class UsuarioOut(BaseModel):
     nome: str
     email: str
     dois_fatores: bool
+    email_verificado: bool
