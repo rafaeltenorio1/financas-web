@@ -64,7 +64,7 @@ def criar_app() -> FastAPI:
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["Content-Type", "X-CSRF-Token"],
-        expose_headers=["Content-Disposition"],
+        expose_headers=["Content-Disposition", "Retry-After"],
     )
     app.add_middleware(CabecalhosDeSeguranca, hsts=settings.AMBIENTE == "producao")
     if settings.PROXIES_CONFIAVEIS:
