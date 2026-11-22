@@ -41,6 +41,7 @@ def pytest_configure(config):
         # O cliente de teste usa http; com Secure o cookie não seria reenviado.
         COOKIE_SECURE="false",
         CORS_ORIGINS=f'["{ORIGEM_FRONT}"]',
+        AMBIENTE="desenvolvimento",
     )
 
     from alembic import command
