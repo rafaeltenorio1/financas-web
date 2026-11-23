@@ -1,0 +1,113 @@
+.ct-cab { display: flex; justify-content: space-between; align-items: center; gap: var(--esp-2); flex-wrap: wrap; margin-bottom: 14px; }
+.ct-cab h1 { font-size: var(--texto-xl); }
+.ct-cab .btn { min-height: 42px; padding: 0 16px; font-size: var(--texto-sm); }
+.ct-vista { display: grid; grid-template-columns: 1fr 1fr; padding: 3px; margin-bottom: 16px; border-radius: 12px; background: var(--superficie); border: 1px solid var(--borda); }
+.ct-vista button { min-height: 38px; border-radius: 9px; font-weight: 600; color: var(--texto-suave); }
+.ct-vista button[aria-pressed="true"] { background: var(--borda-forte); color: var(--texto); }
+.ct-lado { display: none; }
+.ct-grade.mostrar-calendario .ct-lado { display: block; }
+.ct-grade.mostrar-calendario .ct-lista { display: none; }
+
+.ct-grupo { margin-bottom: 18px; }
+.ct-grupo > h2 { display: flex; align-items: center; gap: var(--esp-2); margin-bottom: var(--esp-2); font-size: 0.92rem; }
+.ct-grupo.atraso > h2 { color: var(--despesa); }
+.ct-contagem { padding: 2px 8px; border-radius: var(--raio-pilula); background: var(--superficie-2); color: var(--texto-suave); font-size: 0.74rem; }
+.ct-caixa { border-radius: 18px; background: var(--superficie); border: 1px solid var(--borda); }
+.ct-conta { display: grid; grid-template-columns: 44px 40px minmax(0, 1fr) auto; gap: var(--esp-3); align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--borda); }
+.ct-caixa > :last-child { border-bottom: 0; }
+.ct-data { text-align: center; line-height: 1.05; }
+.ct-data b { display: block; font-size: 1.15rem; }
+.ct-data small { font-size: 0.7rem; font-weight: 600; color: var(--texto-suave); text-transform: uppercase; }
+.ct-info { min-width: 0; }
+.ct-nome { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ct-meta { font-size: 0.8rem; color: var(--texto-suave); }
+.ct-meta .atrasada { color: var(--despesa); font-weight: 600; }
+.ct-meta .perto { color: var(--aviso); font-weight: 600; }
+.ct-direita { display: flex; align-items: center; gap: 10px; }
+.ct-valor { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ct-valor.receita { color: var(--receita); }
+.ct-direita .btn { min-height: 38px; padding: 0 14px; font-size: 0.86rem; }
+.ct-menu-botao { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; color: var(--texto-suave); }
+.ct-menu-botao:hover, .ct-menu-botao[aria-expanded="true"] { background: var(--superficie-2); color: var(--texto); }
+.ct-menu-lugar { position: relative; }
+.ct-menu {
+  position: absolute;
+  z-index: 20;
+  right: 0;
+  top: calc(100% + 4px);
+  min-width: 220px;
+  padding: 6px;
+  border-radius: var(--raio-md);
+  background: var(--fundo);
+  border: 1px solid var(--borda-forte);
+  box-shadow: var(--sombra);
+}
+.ct-menu button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px; padding: 0 12px; border-radius: var(--raio-sm); text-align: left; font-size: 0.88rem; font-weight: 600; }
+.ct-menu button:hover, .ct-menu button:focus-visible { background: var(--superficie-2); outline: none; }
+.ct-menu .perigo { color: var(--despesa); }
+.ct-menu .ic-sm { color: var(--texto-suave); }
+.ct-menu .perigo .ic-sm { color: var(--despesa); }
+
+.ct-pagar { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: end; padding: 14px; margin: 4px -14px -12px; border-top: 1px solid var(--borda); background: var(--fundo); }
+.ct-pagar label { display: grid; gap: 4px; font-size: 0.78rem; font-weight: 600; color: var(--texto-suave); }
+.ct-pagar .entrada { min-height: 42px; font-size: 0.92rem; color-scheme: dark; }
+.ct-pagar-botoes { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 8px; }
+.ct-pagar .mensagem { grid-column: 1 / -1; }
+.ct-pagar-botoes .btn { min-height: 42px; padding: 0 14px; font-size: 0.88rem; }
+.ct-pausadas summary { cursor: pointer; font-weight: 700; color: var(--texto-suave); margin-bottom: 8px; }
+
+.ct-resumo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.ct-resumo div { padding: 12px 14px; border-radius: 16px; background: var(--superficie); }
+.ct-resumo dt { font-size: 0.78rem; font-weight: 600; color: var(--texto-suave); }
+.ct-resumo dd { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ct-resumo .perto { color: var(--aviso); }
+.ct-cal { padding: 12px; border-radius: 18px; background: var(--superficie); }
+.ct-cal-cab { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.ct-cal-cab h2 { font-size: 0.95rem; }
+.ct-cal-cab h2::first-letter { text-transform: uppercase; }
+.ct-semana, .ct-dias { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.ct-semana span { padding: 3px 0; text-align: center; font-size: 0.68rem; font-weight: 600; color: var(--texto-suave); }
+.ct-dia { aspect-ratio: 1 / 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border-radius: 9px; background: var(--fundo); font-size: 0.8rem; }
+.ct-dia.vazio { visibility: hidden; }
+.ct-dia.hoje { box-shadow: inset 0 0 0 2px var(--destaque); }
+button.ct-dia { font-weight: 700; }
+button.ct-dia:hover { background: var(--superficie-2); }
+.ct-dia[aria-pressed="true"] { background: var(--borda-forte); }
+.ct-pontos { display: flex; gap: 2px; }
+.ct-pontos i { width: 5px; height: 5px; border-radius: 50%; background: var(--aviso); }
+.ct-pontos i.atrasada { background: var(--despesa); }
+.ct-pontos i.paga { background: var(--texto-suave); }
+.ct-pontos i.receber { background: var(--receita); }
+.ct-legenda { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; font-size: 0.72rem; color: var(--texto-suave); }
+.ct-legenda span { display: flex; align-items: center; gap: 4px; }
+.ct-legenda i { width: 7px; height: 7px; border-radius: 50%; }
+.ct-do-dia { display: grid; gap: 6px; margin-top: 12px; }
+.ct-do-dia h3 { font-size: 0.85rem; }
+.ct-do-dia h3::first-letter { text-transform: uppercase; }
+.ct-item-dia { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px; background: var(--fundo); font-size: 0.86rem; }
+.ct-item-dia > span:first-child { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ct-item-dia .paga { color: var(--texto-suave); text-decoration: line-through; }
+.ct-item-dia .btn { min-height: 34px; padding: 0 12px; font-size: 0.82rem; white-space: nowrap; }
+.ct-item-dia .estado { font-size: 0.78rem; color: var(--texto-suave); white-space: nowrap; }
+.ct-vazio { padding: 28px 18px; text-align: center; border-radius: 18px; background: var(--superficie); color: var(--texto-suave); }
+.ct-vazio strong { display: block; margin-bottom: 6px; color: var(--texto); font-size: 1.02rem; }
+.ct-vazio .btn { margin-top: 14px; }
+
+@media (max-width: 699px) {
+  .ct-conta { grid-template-columns: 44px minmax(0, 1fr) auto; }
+  .ct-conta .tx-icone { display: none; }
+  .ct-direita .btn-pagar { display: none; }
+  .ct-pagar { grid-template-columns: 1fr 1fr; }
+  .ct-pagar label:first-child { grid-column: 1 / -1; }
+  .ct-pagar-botoes { grid-column: 1 / -1; }
+  .ct-pagar-botoes .btn { flex: 1; }
+}
+@media (min-width: 700px) {
+  .ct-menu .so-celular { display: none; }
+}
+@media (min-width: 900px) {
+  .ct-vista { display: none; }
+  .ct-grade { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 26px; align-items: start; }
+  .ct-lado, .ct-grade.mostrar-calendario .ct-lado { display: block; position: sticky; top: 20px; }
+  .ct-grade .ct-lista, .ct-grade.mostrar-calendario .ct-lista { display: block; }
+}

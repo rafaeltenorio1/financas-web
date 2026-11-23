@@ -21,7 +21,8 @@ registrar("/verificar-email", { publica: true, titulo: "Confirmar e-mail", carre
 registrar("/confirmar-email", { publica: true, titulo: "Confirmar e-mail novo", carregar: () => import("./telas/confirmar-email.js") });
 registrar("/nova", { titulo: "Nova transação", carregar: () => import("./telas/nova.js") });
 registrar("/transacoes", { titulo: "Transações", carregar: () => import("./telas/transacoes.js") });
-for (const caminho of ["/contas", "/conta", "/importar"]) registrar(caminho, { titulo: "Em construção", carregar: emBreve });
+registrar("/contas", { titulo: "Contas", carregar: () => import("./telas/contas.js") });
+for (const caminho of ["/conta", "/importar"]) registrar(caminho, { titulo: "Em construção", carregar: emBreve });
 
 let mensagemPendente = null;
 
