@@ -136,6 +136,7 @@ export function criarEdicao({ grade, adicionar, titulos, aplicarLayout, alturaEm
     if (desktop.matches) marcador.style.gridRowEnd = `span ${alturaEmLinhas(caixa.height)}`;
     secao.before(marcador);
     secao.classList.add("arrastando");
+    secao.inert = true;
     Object.assign(secao.style, { width: `${caixa.width}px`, height: `${caixa.height}px`, left: `${caixa.left}px`, top: `${caixa.top}px` });
     document.body.classList.add("arrastando-cartao");
     alca.setPointerCapture(evento.pointerId);
@@ -188,6 +189,7 @@ export function criarEdicao({ grade, adicionar, titulos, aplicarLayout, alturaEm
       document.removeEventListener("keydown", aoTeclar, true);
       document.body.classList.remove("arrastando-cartao");
       secao.classList.remove("arrastando");
+      secao.inert = false;
       for (const prop of ["width", "height", "left", "top"]) secao.style[prop] = "";
       if (cancelado) {
         marcador.remove();
