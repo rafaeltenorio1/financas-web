@@ -1,3 +1,4 @@
+import { confirmar } from "../confirmar.js";
 import { el, icone, mensagem, ocupado } from "../dom.js";
 import { usuarioAtual } from "../sessao.js";
 import { definirGuardaDeSaida } from "../rotas.js";
@@ -260,7 +261,11 @@ export async function montar(raiz, { parametros }) {
     if (edicao.alterou()) evento.preventDefault();
   }
   addEventListener("beforeunload", aoSairDaPagina);
-  definirGuardaDeSaida(() => !edicao.alterou() || confirm("Você tem mudanças no painel que ainda não foram salvas. Sair sem salvar?"));
+  definirGuardaDeSaida(
+    () =>
+      !edicao.alterou() ||
+      confirmar({ titulo: "Sair sem salvar o painel?", texto: "As mudanças que você fez na organização do painel vão se perder.", confirmar: "Sair sem salvar", cancelar: "Continuar editando", perigo: true }),
+  );
 
   let carregouInicio = false;
   aplicarLayout(preferencias.cartoes);

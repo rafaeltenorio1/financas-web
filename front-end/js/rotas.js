@@ -43,10 +43,17 @@ async function renderizar() {
     ignorarProxima = false;
     return;
   }
-  if (guardaDeSaida && hashAtual !== null && location.hash !== hashAtual && !guardaDeSaida()) {
-    ignorarProxima = true;
-    location.hash = hashAtual;
-    return;
+  if (guardaDeSaida && hashAtual !== null && location.hash !== hashAtual) {
+    const resposta = guardaDeSaida();
+    if (resposta !== true) {
+      const destino = location.hash;
+      ignorarProxima = true;
+      location.hash = hashAtual;
+      if (!(await resposta)) return;
+      guardaDeSaida = null;
+      location.hash = destino;
+      return;
+    }
   }
   guardaDeSaida = null;
   hashAtual = location.hash;

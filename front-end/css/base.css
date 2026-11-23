@@ -97,6 +97,8 @@ h1[tabindex="-1"]:focus, main[tabindex="-1"]:focus { outline: none; }
 .btn-bloco { width: 100%; }
 .btn[aria-busy="true"] { opacity: 0.75; cursor: progress; }
 .btn:disabled:not([aria-busy="true"]) { opacity: 0.5; }
+.btn-perigo { background: var(--despesa); color: var(--no-claro); }
+.btn-perigo:hover:not(:disabled) { background: color-mix(in srgb, var(--despesa) 85%, var(--claro)); }
 
 .campo { display: grid; gap: 6px; }
 .campo label, .campo-rotulo { font-size: var(--texto-sm); font-weight: 600; }
@@ -168,4 +170,38 @@ h1[tabindex="-1"]:focus, main[tabindex="-1"]:focus { outline: none; }
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+.confirmacao {
+  width: min(420px, calc(100vw - 32px));
+  max-width: none;
+  margin: auto;
+  padding: 0;
+  border: 0;
+  border-radius: var(--raio-lg);
+  background: transparent;
+  color: var(--texto);
+  overflow: visible;
+}
+.confirmacao::backdrop { background: rgba(5, 31, 32, 0.72); backdrop-filter: blur(2px); }
+.confirmacao[open] { animation: confirmacao-entra 180ms cubic-bezier(0.2, 0, 0, 1); }
+@keyframes confirmacao-entra { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
+.confirmacao-caixa {
+  display: grid;
+  gap: 10px;
+  padding: 24px;
+  border-radius: var(--raio-lg);
+  border: 1px solid var(--borda-forte);
+  background: var(--superficie);
+  box-shadow: var(--sombra);
+}
+.confirmacao-icone { width: 44px; height: 44px; display: grid; place-items: center; margin-bottom: 4px; border-radius: 14px; background: color-mix(in srgb, var(--destaque) 16%, transparent); color: var(--destaque); }
+.confirmacao-caixa.perigo .confirmacao-icone { background: color-mix(in srgb, var(--despesa) 16%, transparent); color: var(--despesa); }
+.confirmacao h2 { font-size: var(--texto-lg); }
+.confirmacao p { font-size: var(--texto-sm); color: var(--texto-suave); }
+.confirmacao-botoes { display: flex; justify-content: flex-end; gap: var(--esp-2); margin-top: 10px; }
+.confirmacao-botoes .btn { min-height: 44px; padding: 0 18px; }
+@media (max-width: 480px) {
+  .confirmacao-botoes { flex-direction: column-reverse; }
+  .confirmacao-botoes .btn { width: 100%; }
 }
