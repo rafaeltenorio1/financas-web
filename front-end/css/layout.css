@@ -42,7 +42,7 @@ html { scroll-padding-bottom: 104px; }
   color: var(--no-destaque);
   box-shadow: 0 0 0 6px var(--fundo);
 }
-.nav-sair { display: none; }
+.nav-sair, .nav-lateral { display: none; }
 .nav-novo span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
 .conteudo { padding: var(--esp-5) var(--esp-4) calc(104px + env(safe-area-inset-bottom)); max-width: 1280px; }
@@ -81,6 +81,7 @@ html { scroll-padding-bottom: 104px; }
   }
   .nav-novo:hover { background: var(--claro); color: var(--no-destaque); }
   .nav-novo span { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
+  .nav-lateral { display: flex; }
   .nav-sair { display: flex; margin-top: auto; }
   .conteudo { padding: 36px var(--esp-12) var(--esp-12); }
 }

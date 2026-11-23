@@ -7,6 +7,7 @@ const ITENS_NAV = [
   { caminho: "/transacoes", rotulo: "Transações", icone: "transacoes" },
   { caminho: "/nova", rotulo: "Nova transação", icone: "mais", novo: true },
   { caminho: "/contas", rotulo: "Contas", icone: "contas" },
+  { caminho: "/categorias", rotulo: "Categorias", icone: "categorias", soLateral: true },
   { caminho: "/conta", rotulo: "Conta", icone: "conta" },
 ];
 
@@ -22,6 +23,7 @@ registrar("/confirmar-email", { publica: true, titulo: "Confirmar e-mail novo", 
 registrar("/nova", { titulo: "Nova transação", carregar: () => import("./telas/nova.js") });
 registrar("/transacoes", { titulo: "Transações", carregar: () => import("./telas/transacoes.js") });
 registrar("/contas", { titulo: "Contas", carregar: () => import("./telas/contas.js") });
+registrar("/categorias", { titulo: "Categorias", carregar: () => import("./telas/categorias.js") });
 for (const caminho of ["/conta", "/importar"]) registrar(caminho, { titulo: "Em construção", carregar: emBreve });
 
 let mensagemPendente = null;
@@ -38,7 +40,7 @@ function navegacao(caminho) {
     const atual = item.caminho === caminho;
     const link = el(
       "a",
-      { class: `nav-item${item.novo ? " nav-novo" : ""}`, href: `#${item.caminho}`, "aria-current": atual ? "page" : null },
+      { class: `nav-item${item.novo ? " nav-novo" : ""}${item.soLateral ? " nav-lateral" : ""}`, href: `#${item.caminho}`, "aria-current": atual ? "page" : null },
       icone(item.icone),
       el("span", { texto: item.rotulo }),
     );

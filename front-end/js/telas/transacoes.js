@@ -82,6 +82,8 @@ export async function montar(raiz, { parametros }) {
   exportar.setAttribute("aria-label", "Exportar transações filtradas em CSV");
   const importar = el("a", { class: "btn btn-secundario", href: "#/importar", title: "Importar extrato do banco" }, icone("enviar", "ic-sm"), el("span", { class: "rotulo-curto", texto: "Importar" }));
   importar.setAttribute("aria-label", "Importar extrato do banco");
+  const categoriasLink = el("a", { class: "btn btn-secundario", href: "#/categorias", title: "Gerenciar categorias" }, icone("categorias", "ic-sm"), el("span", { class: "rotulo-curto", texto: "Categorias" }));
+  categoriasLink.setAttribute("aria-label", "Gerenciar categorias");
 
   const busca = el("input", { type: "search", class: "entrada", id: "tr-busca", name: "busca", autocomplete: "off", spellcheck: "false", maxlength: 100, placeholder: "Buscar", "aria-describedby": "tr-ajuda" });
   busca.value = filtros.busca;
@@ -134,7 +136,7 @@ export async function montar(raiz, { parametros }) {
       "header",
       { class: "tr-cab" },
       el("div", { class: "painel-mes" }, voltarMes, tituloMes, avancarMes),
-      el("div", { class: "tr-acoes" }, el("div", { class: "tr-modo", role: "group", "aria-label": "Onde mostrar o detalhe" }, ...botoesModo), exportar, importar),
+      el("div", { class: "tr-acoes" }, el("div", { class: "tr-modo", role: "group", "aria-label": "Onde mostrar o detalhe" }, ...botoesModo), exportar, importar, categoriasLink),
     ),
     anuncio,
     grade,

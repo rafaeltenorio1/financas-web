@@ -46,7 +46,16 @@ export function criarSeletorDeCategorias({ prefixo, tipo, selecionada = null, ro
   });
   const grade = el("div", { class: "ft-cats", role: "group", "aria-labelledby": rotuladoPor });
   const nota = el("p", { class: "ft-cats-nota", "aria-live": "polite" });
-  const bloco = el("div", {}, el("div", { class: "ft-busca" }, icone("busca", "ic-sm"), busca), grade, nota);
+  const gerenciar = el("a", { class: "ft-cats-gerenciar", href: "#/categorias" }, icone("categorias", "ic-sm"), "Criar ou editar categorias");
+  gerenciar.addEventListener("click", (evento) => {
+    const dialogo = gerenciar.closest("dialog");
+    if (!dialogo) return;
+    evento.preventDefault();
+    if (!dialogo.dispatchEvent(new Event("cancel", { cancelable: true }))) return;
+    dialogo.close();
+    location.hash = "#/categorias";
+  });
+  const bloco = el("div", {}, el("div", { class: "ft-busca" }, icone("busca", "ic-sm"), busca), grade, nota, gerenciar);
 
   function doTipo() {
     return categorias.filter((c) => !c.tipo_padrao || c.tipo_padrao === estado.tipo);
