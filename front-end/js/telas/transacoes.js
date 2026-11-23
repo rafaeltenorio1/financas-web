@@ -23,9 +23,9 @@ const nomeDoMes = new Intl.DateTimeFormat("pt-BR", { month: "long", timeZone: "U
 
 function lerModo() {
   try {
-    return localStorage.getItem(CHAVE_MODO) === "embaixo" ? "embaixo" : "lado";
+    return localStorage.getItem(CHAVE_MODO) === "lado" ? "lado" : "embaixo";
   } catch {
-    return "lado";
+    return "embaixo";
   }
 }
 
