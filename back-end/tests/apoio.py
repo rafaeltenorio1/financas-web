@@ -25,7 +25,7 @@ async def cadastrar(client, email="ana@example.com", senha=SENHA_PADRAO, nome="A
     resposta = await client.post(
         "/auth/register", json={"nome": nome, "email": email, "senha": senha}
     )
-    assert resposta.status_code == 201, resposta.text
+    assert resposta.status_code == 202, resposta.text
     return resposta.json()
 
 
