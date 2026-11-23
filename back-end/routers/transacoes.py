@@ -3,7 +3,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import AwareDatetime
-from sqlalchemy import Date, cast, func, select
+from sqlalchemy import Date, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
@@ -28,6 +28,7 @@ router = APIRouter(
 )
 
 NAO_ENCONTRADA = HTTPException(status_code=404, detail="Transação não encontrada.")
+BUSCA_MAXIMA = 100
 
 
 async def _buscar_transacao(
@@ -51,6 +52,7 @@ def _filtros(
     data_fim: datetime | None,
     tipo: TipoTransacao | None,
     id_categoria: uuid.UUID | None,
+    busca: str | None = None,
 ) -> list:
     filtros = [Transacao.id_usuario == usuario.id_usuario]
     if data_inicio is not None:
@@ -61,6 +63,21 @@ def _filtros(
         filtros.append(Transacao.tipo == tipo)
     if id_categoria is not None:
         filtros.append(Transacao.id_categoria == id_categoria)
+    termo = (busca or "").strip()
+    if termo:
+        escapado = termo.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        padrao = func.unaccent(f"%{escapado}%")
+
+        def parecido(coluna):
+            return func.unaccent(coluna).ilike(padrao, escape="\\")
+
+        filtros.append(
+            or_(
+                parecido(Transacao.nome),
+                parecido(Transacao.descricao),
+                Transacao.id_categoria.in_(select(Categoria.id_categoria).where(parecido(Categoria.nome))),
+            )
+        )
     return filtros
 
 
@@ -85,12 +102,13 @@ async def listar_transacoes(
     data_fim: AwareDatetime | None = Query(default=None),
     tipo: TipoTransacao | None = Query(default=None),
     id_categoria: uuid.UUID | None = Query(default=None),
+    busca: str | None = Query(default=None, max_length=BUSCA_MAXIMA),
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     usuario: Usuario = Depends(get_usuario_atual),
     db: AsyncSession = Depends(get_db),
 ):
-    filtros = _filtros(usuario, data_inicio, data_fim, tipo, id_categoria)
+    filtros = _filtros(usuario, data_inicio, data_fim, tipo, id_categoria, busca)
     consulta = (
         select(Transacao)
         .where(*filtros)
@@ -120,10 +138,11 @@ async def exportar_transacoes(
     data_fim: AwareDatetime | None = Query(default=None),
     tipo: TipoTransacao | None = Query(default=None),
     id_categoria: uuid.UUID | None = Query(default=None),
+    busca: str | None = Query(default=None, max_length=BUSCA_MAXIMA),
     usuario: Usuario = Depends(get_usuario_atual),
     db: AsyncSession = Depends(get_db),
 ):
-    filtros = _filtros(usuario, data_inicio, data_fim, tipo, id_categoria)
+    filtros = _filtros(usuario, data_inicio, data_fim, tipo, id_categoria, busca)
     consulta = (
         select(
             func.timezone(usuario.fuso, Transacao.data_hora).label("data_local"),
