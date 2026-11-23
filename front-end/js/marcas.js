@@ -404,4 +404,21 @@ export function marcaDe(nome) {
   return null;
 }
 
+const nomeLegivel = (chave) => chave.replace(/^=/, "").replace(/\b\p{L}/gu, (letra) => letra.toUpperCase());
+
+const POR_ID = new Map(
+  MARCAS.map(([id, fundo, cor, chaves, estilo = "logo", texto = null]) => [
+    id,
+    { id, fundo, cor, estilo, texto, nome: nomeLegivel(chaves.find((c) => !c.startsWith("=")) ?? chaves[0]), chaves },
+  ]),
+);
+
+export function marcaPorId(id) {
+  return POR_ID.get(id) ?? null;
+}
+
+export function listaDeMarcas() {
+  return [...POR_ID.values()];
+}
+
 export const QUANTIDADE_MARCAS = MARCAS.length;

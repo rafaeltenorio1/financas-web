@@ -1,6 +1,7 @@
 import { el, icone } from "../dom.js";
-import { categoria, corDaCategoria, simboloDaCategoria } from "../categorias.js";
-import { marcaDe } from "../marcas.js";
+import { categoria, corDaCategoria, iconeValido, simboloDaCategoria } from "../categorias.js";
+import { marcaDe, marcaPorId } from "../marcas.js";
+import { iconeDaContaRecorrente } from "../contas-icones.js";
 import { dataCurta, moedaComSinal } from "../formatos.js";
 
 const SVG = "http://www.w3.org/2000/svg";
@@ -57,24 +58,41 @@ function svgDeUso(href, classe) {
   return svg;
 }
 
-export function iconeDaTransacao(transacao) {
-  const marca = marcaDe(transacao.nome);
-  if (marca) {
-    const caixa = el("span", { class: `tx-icone ${marca.estilo}`, "aria-hidden": "true" });
-    caixa.style.background = marca.fundo;
-    caixa.style.color = marca.cor;
-    if (marca.estilo === "monograma") {
-      caixa.textContent = marca.texto;
-      if (marca.texto.length > 2) caixa.classList.add("longo");
-    } else {
-      caixa.append(svgDeUso(`img/marcas.svg#${marca.id}`));
-    }
-    return caixa;
+export function caixaDaMarca(marca) {
+  const caixa = el("span", { class: `tx-icone ${marca.estilo}`, "aria-hidden": "true" });
+  caixa.style.background = marca.fundo;
+  caixa.style.color = marca.cor;
+  if (marca.estilo === "monograma") {
+    caixa.textContent = marca.texto;
+    if (marca.texto.length > 2) caixa.classList.add("longo");
+  } else {
+    caixa.append(svgDeUso(`img/marcas.svg#${marca.id}`));
   }
-  const cat = categoria(transacao.id_categoria);
-  const caixa = el("span", { class: "tx-icone categoria", "aria-hidden": "true" }, icone(simboloDaCategoria(cat)));
+  return caixa;
+}
+
+export function caixaDoSimbolo(simbolo, cat) {
+  const caixa = el("span", { class: "tx-icone categoria", "aria-hidden": "true" }, icone(simbolo));
   caixa.style.setProperty("--cor", corDaCategoria(cat));
   return caixa;
+}
+
+export function iconePorCodigo(codigo, cat = null) {
+  if (typeof codigo !== "string") return null;
+  if (codigo.startsWith("m-")) {
+    const marca = marcaPorId(codigo.slice(2));
+    return marca ? caixaDaMarca(marca) : null;
+  }
+  return iconeValido(codigo) ? caixaDoSimbolo(codigo, cat) : null;
+}
+
+export function iconeDaTransacao(transacao) {
+  const cat = categoria(transacao.id_categoria);
+  const escolhido = iconePorCodigo(transacao.icone ?? iconeDaContaRecorrente(transacao.id_conta_recorrente), cat);
+  if (escolhido) return escolhido;
+  const marca = marcaDe(transacao.nome);
+  if (marca) return caixaDaMarca(marca);
+  return caixaDoSimbolo(simboloDaCategoria(cat), cat);
 }
 
 export function nomeDaTransacao(transacao) {

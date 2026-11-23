@@ -1,5 +1,6 @@
 import { api } from "../api.js";
 import { carregarCategorias } from "../categorias.js";
+import { carregarIconesDasContas } from "../contas-icones.js";
 import { inicioDoMes, somarMeses } from "../datas.js";
 
 function consulta(parametros) {
@@ -26,7 +27,7 @@ export const FONTES = {
   receitas: ({ periodo }, sinal) =>
     api.get(`/transacoes?${consulta({ data_inicio: periodo.inicio, data_fim: periodo.fim, tipo: "receita", limit: 12 })}`, { sinal }),
   contas: (_contexto, sinal) => api.get(`/contas-recorrentes?${consulta({ ativa: true, tipo: "despesa", limit: 100 })}`, { sinal }),
-  categorias: () => carregarCategorias(),
+  categorias: () => Promise.all([carregarCategorias(), carregarIconesDasContas().catch(() => null)]).then(([categorias]) => categorias),
 };
 
 export const DEPENDENCIAS = {

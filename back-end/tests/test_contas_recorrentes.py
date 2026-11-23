@@ -270,3 +270,62 @@ async def test_alteracoes_exigem_csrf(logado):
 
 async def test_exige_login(client):
     assert (await client.get(BASE)).status_code == 401
+
+
+async def test_icone_comeca_nulo(logado):
+    assert (await _criar(logado))["icone"] is None
+
+
+@pytest.mark.parametrize("icone", ["m-netflix", "c-moradia", "m-" + "a" * 38])
+async def test_cria_com_icone_de_marca_ou_generico(logado, icone):
+    assert (await _criar(logado, icone=icone))["icone"] == icone
+
+
+@pytest.mark.parametrize(
+    "icone",
+    ["netflix", "x-netflix", "m-", "M-netflix", "m-Netflix", "m-net_flix", "m-net flix", "m-" + "a" * 39, 'm-a"><svg', ""],
+)
+async def test_icone_invalido_retorna_422(logado, icone):
+    await _criar(logado, esperado=422, icone=icone)
+
+
+async def test_editar_icone_null_volta_ao_automatico_e_omitir_mantem(logado):
+    conta = await _criar(logado, icone="m-netflix")
+    id_conta = conta["id_conta_recorrente"]
+
+    resposta = await _patch(logado, id_conta, {"valor": "40.00"})
+    assert resposta.json()["icone"] == "m-netflix"
+
+    resposta = await _patch(logado, id_conta, {"icone": "m-spotify"})
+    assert resposta.json()["icone"] == "m-spotify"
+
+    resposta = await _patch(logado, id_conta, {"icone": None})
+    assert resposta.status_code == 200
+    assert resposta.json()["icone"] is None
+
+
+async def test_banco_recusa_icone_fora_do_formato(logado, db):
+    from datetime import date
+
+    from sqlalchemy.exc import IntegrityError
+
+    from models.conta_recorrente import ContaRecorrente
+    from models.enums import Periodicidade, TipoTransacao
+    from models.usuario import Usuario
+
+    usuario = await db.scalar(select(Usuario).limit(1))
+    db.add(
+        ContaRecorrente(
+            id_usuario=usuario.id_usuario,
+            nome="Direto no banco",
+            valor=Decimal("10.00"),
+            tipo=TipoTransacao.DESPESA,
+            periodicidade=Periodicidade.MENSAL,
+            data_inicio=date(2026, 12, 1),
+            proximo_vencimento=date(2026, 12, 1),
+            icone="Netflix",
+        )
+    )
+    with pytest.raises(IntegrityError):
+        await db.commit()
+    await db.rollback()

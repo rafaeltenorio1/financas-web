@@ -9,6 +9,7 @@ from models.enums import Periodicidade, TipoPagamento, TipoTransacao
 from schemas.transacao import TransacaoOut
 
 NomeConta = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=255)]
+IconeConta = Annotated[str, StringConstraints(strip_whitespace=True, pattern=r"^[cm]-[a-z0-9-]{1,38}$")]
 
 
 class ContaRecorrenteCreate(BaseModel):
@@ -22,6 +23,7 @@ class ContaRecorrenteCreate(BaseModel):
     data_fim: date | None = None
     avisar: bool = True
     descricao: str | None = Field(default=None, max_length=1000)
+    icone: IconeConta | None = None
 
     @model_validator(mode="after")
     def validar_periodo(self) -> Self:
@@ -41,6 +43,7 @@ class ContaRecorrenteUpdate(BaseModel):
     ativa: bool = Field(default=None)
     avisar: bool = Field(default=None)
     descricao: str | None = Field(default=None, max_length=1000)
+    icone: IconeConta | None = None
 
 
 class ContaRecorrenteOut(BaseModel):
@@ -59,6 +62,7 @@ class ContaRecorrenteOut(BaseModel):
     ativa: bool
     avisar: bool
     descricao: str | None
+    icone: str | None
     criada_em: datetime
 
 

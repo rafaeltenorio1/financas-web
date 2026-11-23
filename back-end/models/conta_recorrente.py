@@ -27,6 +27,7 @@ class ContaRecorrente(Base):
     ativa: Mapped[bool] = mapped_column(default=True, server_default=true())
     avisar: Mapped[bool] = mapped_column(default=True, server_default=true())
     descricao: Mapped[str | None] = mapped_column(String(1000))
+    icone: Mapped[str | None] = mapped_column(String(40))
     criada_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (
@@ -39,5 +40,6 @@ class ContaRecorrente(Base):
             "data_fim IS NULL OR data_fim >= data_inicio",
             name="check_conta_recorrente_fim_depois_do_inicio",
         ),
+        CheckConstraint("icone ~ '^[cm]-[a-z0-9-]{1,38}$'", name="check_conta_recorrente_icone"),
         Index("idx_conta_recorrente_id_usuario", "id_usuario"),
     )
