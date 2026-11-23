@@ -14,17 +14,23 @@ CorHex = Annotated[
     AfterValidator(str.lower),
 ]
 
+IconeCategoria = Annotated[
+    str, StringConstraints(strip_whitespace=True, pattern=r"^c-[a-z0-9-]{1,38}$")
+]
+
 
 class CategoriaCreate(BaseModel):
     nome: NomeCategoria
     tipo_padrao: TipoTransacao | None = None
     cor: CorHex | None = None
+    icone: IconeCategoria | None = None
 
 
 class CategoriaUpdate(BaseModel):
     nome: NomeCategoria = Field(default=None)
     tipo_padrao: TipoTransacao | None = None
     cor: CorHex = Field(default=None)
+    icone: IconeCategoria | None = None
 
 
 class CategoriaOut(BaseModel):
@@ -34,4 +40,5 @@ class CategoriaOut(BaseModel):
     nome: str
     tipo_padrao: TipoTransacao | None
     cor: str
+    icone: str | None
     padrao: bool

@@ -8,6 +8,8 @@ Contrato:
 - Apagar uma categoria deixa as transações dela sem categoria.
 - Cor: hex #rrggbb gravado em minúsculas; sem cor no POST, o servidor usa o pastel
   menos usado pela pessoa; padrão já vêm com cor (migração de dados) e não mudam.
+- Ícone: opcional, formato c-<nome>; nulo deixa o front escolher. Padrão vêm sem ícone.
+  No PATCH, null volta ao automático e omitir mantém o atual.
 """
 
 import pytest
@@ -75,7 +77,7 @@ async def test_lista_padrao_em_ordem_do_banco(logado, db):
     assert [c["nome"] for c in categorias] == list(padrao)
     assert all(c["padrao"] is True for c in categorias)
     # O dono não é exposto: o front só precisa saber se é padrão.
-    assert all(set(c) == {"id_categoria", "nome", "tipo_padrao", "cor", "padrao"} for c in categorias)
+    assert all(set(c) == {"id_categoria", "nome", "tipo_padrao", "cor", "icone", "padrao"} for c in categorias)
 
 
 async def test_lista_inclui_as_proprias_e_nao_as_de_outro(logado, csrf, outro_usuario):
@@ -410,6 +412,87 @@ async def test_banco_recusa_cor_fora_do_formato(db):
     from models.categoria import Categoria
 
     db.add(Categoria(nome="Direto no banco", cor="#ABCDEF"))
+    with pytest.raises(IntegrityError):
+        await db.commit()
+    await db.rollback()
+
+
+
+# --- Ícone -----------------------------------------------------------------
+
+
+async def test_padrao_vem_sem_icone(logado):
+    categorias = (await logado.get("/categorias")).json()
+    assert categorias
+    assert all(c["icone"] is None for c in categorias)
+
+
+async def test_cria_sem_icone_fica_nulo(logado, csrf):
+    assert (await _criar(logado, csrf))["icone"] is None
+
+
+async def test_cria_com_icone(logado, csrf):
+    resposta = await logado.post(
+        "/categorias", json={"nome": "Pet", "icone": " c-pata-de-gato "}, headers={"X-CSRF-Token": csrf}
+    )
+    assert resposta.status_code == 201, resposta.text
+    assert resposta.json()["icone"] == "c-pata-de-gato"
+
+
+@pytest.mark.parametrize(
+    "icone",
+    ["pata", "c-", "C-pata", "c-Pata", "c-pata_gato", "c-pata gato", "c-" + "a" * 39, "c-pata\"><svg", ""],
+)
+async def test_icone_invalido_retorna_422(logado, csrf, icone):
+    resposta = await logado.post(
+        "/categorias", json={"nome": "Pet", "icone": icone}, headers={"X-CSRF-Token": csrf}
+    )
+    assert resposta.status_code == 422
+
+
+async def test_icone_no_limite_de_tamanho(logado, csrf):
+    icone = "c-" + "a" * 38
+    resposta = await logado.post(
+        "/categorias", json={"nome": "Pet", "icone": icone}, headers={"X-CSRF-Token": csrf}
+    )
+    assert resposta.status_code == 201, resposta.text
+    assert resposta.json()["icone"] == icone
+
+
+async def test_edita_o_icone_e_omitir_mantem(logado, csrf):
+    criada = await _criar(logado, csrf)
+    url = f"/categorias/{criada['id_categoria']}"
+    resposta = await logado.patch(url, json={"icone": "c-casa"}, headers={"X-CSRF-Token": csrf})
+    assert resposta.status_code == 200, resposta.text
+    assert resposta.json()["icone"] == "c-casa"
+
+    resposta = await logado.patch(url, json={"nome": "Bichos"}, headers={"X-CSRF-Token": csrf})
+    assert resposta.json()["icone"] == "c-casa"
+
+
+async def test_icone_null_volta_ao_automatico(logado, csrf):
+    criada = await _criar(logado, csrf)
+    url = f"/categorias/{criada['id_categoria']}"
+    await logado.patch(url, json={"icone": "c-casa"}, headers={"X-CSRF-Token": csrf})
+    resposta = await logado.patch(url, json={"icone": None}, headers={"X-CSRF-Token": csrf})
+    assert resposta.status_code == 200, resposta.text
+    assert resposta.json()["icone"] is None
+
+
+async def test_icone_da_padrao_nao_muda(logado, csrf, db):
+    padrao = await _uma_padrao(db)
+    resposta = await logado.patch(
+        f"/categorias/{padrao.id_categoria}", json={"icone": "c-casa"}, headers={"X-CSRF-Token": csrf}
+    )
+    assert resposta.status_code == 403
+
+
+async def test_banco_recusa_icone_fora_do_formato(db):
+    from sqlalchemy.exc import IntegrityError
+
+    from models.categoria import Categoria
+
+    db.add(Categoria(nome="Direto no banco", icone="C-Casa"))
     with pytest.raises(IntegrityError):
         await db.commit()
     await db.rollback()

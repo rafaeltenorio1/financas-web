@@ -16,6 +16,7 @@ class Categoria(Base):
     tipo_padrao: Mapped[TipoTransacao | None] = mapped_column()
     nome: Mapped[str] = mapped_column(String(100))
     cor: Mapped[str] = mapped_column(String(7), default="#7dbde8", server_default="#7dbde8")
+    icone: Mapped[str | None] = mapped_column(String(40))
 
     @property
     def padrao(self) -> bool:
@@ -24,4 +25,5 @@ class Categoria(Base):
     __table_args__ = (
         UniqueConstraint("id_usuario", "nome", name="uq_categoria_usuario_nome", postgresql_nulls_not_distinct=True,),
         CheckConstraint("cor ~ '^#[0-9a-f]{6}$'", name="check_categoria_cor_hex"),
+        CheckConstraint("icone ~ '^c-[a-z0-9-]{1,38}$'", name="check_categoria_icone"),
     )
