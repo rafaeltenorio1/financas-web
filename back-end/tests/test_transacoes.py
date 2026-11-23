@@ -463,3 +463,85 @@ async def test_busca_com_aspas_e_sql_nao_quebra(logado, csrf):
     assert await _buscar(logado, "d'avila") == {"D'Ávila"}
     assert await _buscar(logado, "'; DROP TABLE transacao; --") == set()
     assert len((await logado.get("/transacoes")).json()) == 1
+
+
+# --- Totais ----------------------------------------------------------------
+
+
+async def _totais(client, **params):
+    resposta = await client.get("/transacoes/totais", params=params)
+    assert resposta.status_code == 200, resposta.text
+    return resposta.json()
+
+
+async def test_totais_vazios(logado):
+    assert await _totais(logado) == {"receitas": "0.00", "despesas": "0.00", "quantidade": 0, "por_dia": []}
+
+
+async def test_totais_somam_tudo_e_nao_so_uma_pagina(logado, csrf):
+    for i in range(55):
+        await _criar(logado, csrf, nome=f"Mercado {i}", valor="10.00")
+    await _criar(logado, csrf, nome="Salário", valor="1000.00", tipo="receita")
+
+    pagina = (await logado.get("/transacoes", params={"busca": "mercado"})).json()
+    totais = await _totais(logado, busca="mercado")
+
+    assert len(pagina) == 50
+    assert totais["quantidade"] == 55
+    assert totais["despesas"] == "550.00"
+    assert totais["receitas"] == "0.00"
+
+
+async def test_totais_por_dia_no_fuso(logado, csrf):
+    await _criar(logado, csrf, valor="30.00", data_hora="2026-11-30T22:00:00-03:00")
+    await _criar(logado, csrf, valor="20.00", data_hora="2026-11-30T09:00:00-03:00")
+    await _criar(logado, csrf, valor="500.00", tipo="receita", data_hora="2026-11-29T12:00:00-03:00")
+
+    sao_paulo = await _totais(logado)
+    utc = await _totais(logado, fuso="UTC")
+
+    assert sao_paulo["por_dia"] == [
+        {"dia": "2026-11-30", "receitas": "0.00", "despesas": "50.00"},
+        {"dia": "2026-11-29", "receitas": "500.00", "despesas": "0.00"},
+    ]
+    assert [d["dia"] for d in utc["por_dia"]] == ["2026-12-01", "2026-11-30", "2026-11-29"]
+
+
+async def test_totais_respeitam_os_mesmos_filtros_da_lista(logado, csrf, db):
+    from models.categoria import Categoria
+
+    combustivel = await db.scalar(select(Categoria).where(Categoria.id_usuario.is_(None), Categoria.nome == "Combustível"))
+    await _criar(logado, csrf, nome="Posto", valor="200.00", id_categoria=str(combustivel.id_categoria))
+    await _criar(logado, csrf, nome="Posto outubro", valor="90.00", id_categoria=str(combustivel.id_categoria), data_hora="2026-10-10T12:00:00-03:00")
+    await _criar(logado, csrf, nome="Freela", valor="700.00", tipo="receita")
+
+    filtros = {"id_categoria": str(combustivel.id_categoria), "data_inicio": "2026-11-01T00:00:00-03:00", "data_fim": "2026-12-01T00:00:00-03:00"}
+    totais = await _totais(logado, **filtros)
+    lista = (await logado.get("/transacoes", params=filtros)).json()
+
+    assert totais["quantidade"] == len(lista) == 1
+    assert totais["despesas"] == "200.00"
+    assert (await _totais(logado, tipo="receita"))["receitas"] == "700.00"
+    assert (await _totais(logado, tipo="receita"))["despesas"] == "0.00"
+
+
+async def test_totais_so_do_proprio_usuario(logado, csrf, outro_usuario):
+    await _criar(outro_usuario, await obter_csrf(outro_usuario), valor="999.00", nome="Da Bia")
+    await _criar(logado, csrf, valor="10.00")
+
+    totais = await _totais(logado)
+    assert totais["despesas"] == "10.00"
+    assert totais["quantidade"] == 1
+
+
+@pytest.mark.parametrize("fuso", ["Marte/Olympus", "America/Sao_Paulo'; DROP TABLE transacao; --"])
+async def test_totais_recusam_fuso_invalido(logado, fuso):
+    assert (await logado.get("/transacoes/totais", params={"fuso": fuso})).status_code == 422
+
+
+async def test_totais_exigem_login(client):
+    assert (await client.get("/transacoes/totais")).status_code == 401
+
+
+async def test_rota_totais_nao_conflita_com_busca_por_id(logado):
+    assert (await logado.get("/transacoes/totais")).status_code == 200
