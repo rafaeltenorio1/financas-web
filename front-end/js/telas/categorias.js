@@ -19,7 +19,7 @@ export async function montar(raiz, { parametros }) {
   const mes = hoje(fuso);
   const nomeDoMes = new Intl.DateTimeFormat("pt-BR", { month: "long", timeZone: "UTC" }).format(new Date(Date.UTC(mes.ano, mes.mes - 1, 1)));
   const estado = {
-    tipo: TIPOS_VALIDOS.has(parametros.get("tipo")) ? parametros.get("tipo") : "despesa",
+    tipo: TIPOS_VALIDOS.has(parametros.get("tipo")) ? parametros.get("tipo") : "todas",
     busca: "",
     categorias: [],
     totais: new Map(),
@@ -52,7 +52,7 @@ export async function montar(raiz, { parametros }) {
     if (tipo === estado.tipo) return;
     estado.tipo = tipo;
     abas.forEach((b, i) => b.setAttribute("aria-pressed", String(ABAS[i][0] === tipo)));
-    history.replaceState(null, "", `#/categorias${tipo === "despesa" ? "" : `?tipo=${tipo}`}`);
+    history.replaceState(null, "", `#/categorias${tipo === "todas" ? "" : `?tipo=${tipo}`}`);
     desenhar();
   }
 

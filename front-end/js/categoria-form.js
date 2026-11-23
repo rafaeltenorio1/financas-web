@@ -1,7 +1,9 @@
 import { api, ErroApi } from "./api.js";
+import { confirmar } from "./confirmar.js";
 import { el, icone, mensagem, ocupado } from "./dom.js";
 import { avisar } from "./avisos.js";
-import { adivinharIcone, esquecerCategorias, ICONES, iconeValido } from "./categorias.js";
+import { adivinharIcone, carregarCategorias, esquecerCategorias, ICONES, iconeValido } from "./categorias.js";
+import { criarSeletorDeCor, guardarCorRecente } from "./seletor-cor.js";
 import { esquecerCachesDoFormulario } from "./transacao-form.js";
 
 export const PASTEIS = [
@@ -56,12 +58,11 @@ export function abrirFormularioCategoria({ categoria = null, tipo = "despesa", c
   const notaTipo = el("p", { class: "campo-ajuda", id: "cf-nota-tipo" });
 
   const cores = el("div", { class: "cf-cores", role: "group", "aria-labelledby": "cf-titulo-cor" });
-  const seletorCor = el("input", { type: "color", id: "cf-outra-cor", name: "outra-cor", value: estado.outraCor ? corInicial : "#5f8a76" });
-  const blocoOutraCor = el("label", { class: "cf-outra-cor", for: "cf-outra-cor" }, seletorCor, el("span", { texto: "Escolher a cor" }));
+  const lugarDoSeletor = el("div", { class: "cf-cores-lugar" }, cores);
+  let seletorCor = null;
   const avisoCor = el("p", { class: "cf-aviso-cor", "aria-live": "polite" });
 
-  const icones = el("div", { class: "cf-icones", role: "group", "aria-labelledby": "cf-titulo-icone", "aria-describedby": "cf-nota-icone" });
-  const notaIcone = el("p", { class: "campo-ajuda", id: "cf-nota-icone" });
+  const icones = el("div", { class: "cf-icones", role: "group", "aria-labelledby": "cf-titulo-icone" });
 
   const avisoErro = el("div", { class: "mensagem", role: "alert" });
   const salvar = el("button", { type: "submit", class: "btn btn-primario", texto: editando ? "Salvar alterações" : "Criar categoria" });
@@ -77,8 +78,8 @@ export function abrirFormularioCategoria({ categoria = null, tipo = "despesa", c
       previa,
       el("div", { class: "ft-secao campo" }, el("label", { class: "ft-rotulo", for: "cf-nome", texto: "Nome" }), nome, erroNome),
       el("div", { class: "ft-secao" }, el("h3", { id: "cf-titulo-tipo", texto: "Usar em" }), chipsTipo, notaTipo),
-      el("div", { class: "ft-secao" }, el("h3", { id: "cf-titulo-cor", texto: "Cor" }), cores, blocoOutraCor, avisoCor),
-      el("div", { class: "ft-secao" }, el("h3", { id: "cf-titulo-icone", texto: "Ícone" }), notaIcone, icones),
+      el("div", { class: "ft-secao" }, el("h3", { id: "cf-titulo-cor", texto: "Cor" }), lugarDoSeletor, avisoCor),
+      el("div", { class: "ft-secao" }, el("h3", { id: "cf-titulo-icone", texto: "Ícone" }), icones),
       apagar ? el("div", { class: "ft-secao cf-zona-apagar" }, apagar) : null,
     ),
     el("div", { class: "ft-rodape" }, avisoErro, salvar),
@@ -118,24 +119,55 @@ export function abrirFormularioCategoria({ categoria = null, tipo = "despesa", c
       amostra.addEventListener("click", () => {
         estado.cor = hex;
         estado.outraCor = false;
+        fecharSeletor();
         atualizarCor();
         cores.querySelectorAll(".cf-cor")[PASTEIS.findIndex(([h]) => h === hex)].focus();
       });
       cores.append(amostra);
     }
-    const outra = el("button", { type: "button", class: "cf-cor cf-cor-outra", "aria-pressed": String(estado.outraCor), "aria-expanded": String(estado.outraCor), "aria-controls": "cf-outra-cor" }, el("span", { texto: "Outra cor" }));
-    outra.addEventListener("click", () => {
-      estado.outraCor = true;
-      estado.cor = seletorCor.value.toLowerCase();
-      atualizarCor();
-      seletorCor.focus();
-    });
+    const ponto = el("span", { class: "cf-cor-ponto", "aria-hidden": "true" });
+    if (estado.outraCor) ponto.style.background = estado.cor;
+    const outra = el("button", { type: "button", class: "cf-cor cf-cor-outra", "aria-pressed": String(estado.outraCor), "aria-expanded": String(seletorCor !== null), "aria-controls": "cf-seletor-cor" }, ponto, el("span", { texto: "Outra cor" }));
+    outra.addEventListener("click", () => (seletorCor ? fecharSeletor() : abrirSeletor()));
     cores.append(outra);
+  }
+
+  async function abrirSeletor() {
+    let usadas = [];
+    try {
+      usadas = [...(await carregarCategorias()).values()].filter((c) => !c.padrao && !PASTEIS.some(([hex]) => hex === c.cor)).map((c) => c.cor);
+    } catch {}
+    if (seletorCor || !dialogo.isConnected) return;
+    const inicial = estado.outraCor ? estado.cor : "#4fd1a5";
+    seletorCor = criarSeletorDeCor({
+      id: "cf-seletor-cor",
+      inicial,
+      coresDasCategorias: usadas,
+      aoMudar: (hex) => {
+        estado.cor = hex;
+        estado.outraCor = true;
+        atualizarCor();
+      },
+      aoFechar: () => fecharSeletor(true),
+    });
+    lugarDoSeletor.append(seletorCor.painel);
+    estado.cor = inicial;
+    estado.outraCor = true;
+    atualizarCor();
+    seletorCor.focar();
+    seletorCor.painel.scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  }
+
+  function fecharSeletor(devolverFoco = false) {
+    if (!seletorCor) return;
+    seletorCor.painel.remove();
+    seletorCor = null;
+    desenharCores();
+    if (devolverFoco) cores.querySelector(".cf-cor-outra")?.focus();
   }
 
   function atualizarCor() {
     desenharCores();
-    blocoOutraCor.hidden = !estado.outraCor;
     const baixo = contraste(estado.cor, FUNDO_ESCURO) < CONTRASTE_MINIMO;
     avisoCor.replaceChildren();
     if (baixo) avisoCor.append(icone("alerta", "ic-sm"), el("span", { texto: "Essa cor fica difícil de ver no fundo escuro. Prefira um tom mais claro." }));
@@ -158,13 +190,11 @@ export function abrirFormularioCategoria({ categoria = null, tipo = "despesa", c
       botao.addEventListener("click", () => escolherIcone(id, botao));
       icones.append(botao);
     }
-    notaIcone.textContent = estado.icone === null ? "No automático, o ícone segue o nome. Toque em outro para fixar." : "";
   }
 
   function escolherIcone(id, botao) {
     estado.icone = id;
     icones.querySelectorAll(".cf-icone").forEach((b) => b.setAttribute("aria-pressed", String(b === botao)));
-    notaIcone.textContent = id === null ? "No automático, o ícone segue o nome. Toque em outro para fixar." : "";
     desenharPrevia();
   }
 
@@ -176,7 +206,16 @@ export function abrirFormularioCategoria({ categoria = null, tipo = "despesa", c
 
   const retrato = () => JSON.stringify([nome.value, estado.tipo, estado.cor, estado.icone]);
   const inicial = retrato();
-  const podeFechar = () => retrato() === inicial || confirm(editando ? "Descartar as alterações desta categoria?" : "Descartar esta categoria sem salvar?");
+  async function pedirFechamento() {
+    if (retrato() === inicial) return true;
+    return confirmar({
+      titulo: editando ? "Descartar as alterações?" : "Descartar esta categoria?",
+      texto: editando ? "O que você mudou nesta categoria vai se perder." : "O que você preencheu ainda não foi salvo.",
+      confirmar: "Descartar",
+      cancelar: "Continuar editando",
+      perigo: true,
+    });
+  }
 
   let ultimoAuto = adivinharIcone(nome.value);
   nome.addEventListener("input", () => {
@@ -188,23 +227,30 @@ export function abrirFormularioCategoria({ categoria = null, tipo = "despesa", c
       icones.querySelector(".cf-icone-auto svg")?.replaceWith(icone(auto));
     }
   });
-  seletorCor.addEventListener("input", () => {
-    estado.cor = seletorCor.value.toLowerCase();
-    atualizarCor();
+  formulario.addEventListener("pointerdown", (evento) => {
+    if (seletorCor && !lugarDoSeletor.contains(evento.target)) fecharSeletor();
   });
-  fechar.addEventListener("click", () => {
-    if (podeFechar()) dialogo.close();
+  fechar.addEventListener("click", async () => {
+    if (await pedirFechamento()) dialogo.close();
   });
-  dialogo.addEventListener("cancel", (evento) => {
-    if (!podeFechar()) evento.preventDefault();
+  dialogo.addEventListener("cancel", async (evento) => {
+    evento.preventDefault();
+    if (await pedirFechamento()) dialogo.close();
   });
+  dialogo.pedirFechamento = pedirFechamento;
   dialogo.addEventListener("close", () => {
     dialogo.remove();
     if (origemDoFoco?.isConnected) origemDoFoco.focus();
   });
 
   apagar?.addEventListener("click", async () => {
-    if (!confirm(`Apagar a categoria ${categoria.nome}? As transações e contas dela ficam sem categoria. Isso não pode ser desfeito.`)) return;
+    const sim = await confirmar({
+      titulo: `Apagar a categoria ${categoria.nome}?`,
+      texto: "As transações e contas dela ficam sem categoria. Não dá para desfazer.",
+      confirmar: "Apagar categoria",
+      perigo: true,
+    });
+    if (!sim) return;
     mensagem(avisoErro, "erro", "");
     ocupado(apagar, true, "Apagando…");
     try {
@@ -234,6 +280,7 @@ export function abrirFormularioCategoria({ categoria = null, tipo = "despesa", c
     ocupado(salvar, true, "Salvando…");
     try {
       const salva = editando ? await api.patch(`/categorias/${categoria.id_categoria}`, corpo) : await api.post("/categorias", corpo);
+      if (estado.outraCor) guardarCorRecente(estado.cor);
       esquecerCategorias();
       esquecerCachesDoFormulario();
       dialogo.close("salvo");

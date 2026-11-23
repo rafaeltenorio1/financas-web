@@ -58,11 +58,8 @@
 }
 .cf-cor:hover { box-shadow: 0 0 0 2px var(--fundo), 0 0 0 3.5px var(--borda-forte); }
 .cf-cor[aria-pressed="true"] { box-shadow: 0 0 0 3px var(--fundo), 0 0 0 5px var(--texto); }
-.cf-cor-outra { width: auto; padding: 0 14px; border-radius: var(--raio-pilula); border: 1.5px dashed var(--borda-forte); background: none; font-size: var(--texto-sm); font-weight: 600; color: var(--texto-suave); }
+.cf-cor-outra { display: inline-flex; align-items: center; gap: 8px; width: auto; padding: 0 14px 0 8px; border-radius: var(--raio-pilula); border: 1.5px dashed var(--borda-forte); background: none; font-size: var(--texto-sm); font-weight: 600; color: var(--texto-suave); }
 .cf-cor-outra[aria-pressed="true"] { border-style: solid; color: var(--texto); }
-.cf-outra-cor { display: inline-flex; align-items: center; gap: var(--esp-3); margin-top: var(--esp-3); font-size: var(--texto-sm); font-weight: 600; cursor: pointer; }
-.cf-outra-cor[hidden] { display: none; }
-.cf-outra-cor input { width: 52px; height: 40px; padding: 2px; border-radius: var(--raio-sm); border: 1.5px solid var(--borda-forte); background: var(--fundo); cursor: pointer; }
 .cf-aviso-cor:empty { display: none; }
 .cf-aviso-cor { display: flex; align-items: center; gap: var(--esp-2); margin-top: var(--esp-2); font-size: var(--texto-xs); font-weight: 600; color: var(--aviso); }
 .cf-aviso-cor .ic-sm { flex: none; }
@@ -90,3 +87,61 @@
   .cg-barra { grid-template-columns: 340px minmax(0, 420px); align-items: center; }
   .cf-previa { background: color-mix(in srgb, var(--cor) 8%, var(--fundo)); }
 }
+
+.cf-cores-lugar { position: relative; }
+.cf-cor-ponto { width: 22px; height: 22px; border-radius: 50%; background: conic-gradient(#ff6b6b, #f2c14e, #3ee08a, #62c4b8, #7dbde8, #a996ee, #ec93b8, #ff6b6b); }
+
+.sc-painel {
+  scroll-margin: 16px 0 110px;
+  position: absolute;
+  z-index: 5;
+  bottom: calc(100% + 10px);
+  right: 0;
+  width: min(300px, 100%);
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: var(--raio-lg);
+  border: 1px solid var(--borda-forte);
+  background: var(--fundo);
+  box-shadow: var(--sombra);
+}
+.sc-area {
+  position: relative;
+  height: 120px;
+  border-radius: var(--raio-md);
+  background: linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, var(--matiz));
+  cursor: crosshair;
+  touch-action: none;
+}
+.sc-alvo {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.4);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.sc-barra { display: flex; align-items: center; gap: var(--esp-3); }
+.sc-amostra { flex: none; width: 34px; height: 34px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15); }
+.sc-matiz {
+  flex: 1;
+  height: 14px;
+  border-radius: var(--raio-pilula);
+  background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+.sc-matiz::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--texto); border: 3px solid var(--fundo); box-shadow: 0 0 0 1px var(--borda-forte); }
+.sc-matiz::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--texto); border: 3px solid var(--fundo); }
+.sc-codigo-linha { display: flex; align-items: center; gap: var(--esp-3); }
+.sc-codigo-linha label { font-size: var(--texto-sm); font-weight: 600; color: var(--texto-suave); }
+.sc-codigo { flex: 1; min-width: 0; min-height: 40px; font-variant-numeric: tabular-nums; text-transform: lowercase; }
+.sc-titulo { margin-bottom: 6px; font-size: var(--texto-xs); font-weight: 700; color: var(--texto-suave); }
+.sc-linha { display: flex; flex-wrap: wrap; gap: 6px; }
+.sc-recente { width: 28px; height: 28px; border-radius: 50%; background: var(--amostra); box-shadow: 0 0 0 2px var(--fundo), 0 0 0 3px transparent; }
+.sc-recente:hover { box-shadow: 0 0 0 2px var(--fundo), 0 0 0 3.5px var(--texto-suave); }
+.sc-pronto { min-height: 40px; padding: 0 16px; }
