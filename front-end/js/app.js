@@ -8,6 +8,7 @@ const ITENS_NAV = [
   { caminho: "/nova", rotulo: "Nova transação", icone: "mais", novo: true },
   { caminho: "/contas", rotulo: "Contas", icone: "contas" },
   { caminho: "/categorias", rotulo: "Categorias", icone: "categorias", soLateral: true },
+  { caminho: "/importar", rotulo: "Importar", icone: "enviar", soLateral: true },
   { caminho: "/conta", rotulo: "Conta", icone: "conta" },
 ];
 
@@ -24,7 +25,8 @@ registrar("/nova", { titulo: "Nova transação", carregar: () => import("./telas
 registrar("/transacoes", { titulo: "Transações", carregar: () => import("./telas/transacoes.js") });
 registrar("/contas", { titulo: "Contas", carregar: () => import("./telas/contas.js") });
 registrar("/categorias", { titulo: "Categorias", carregar: () => import("./telas/categorias.js") });
-for (const caminho of ["/conta", "/importar"]) registrar(caminho, { titulo: "Em construção", carregar: emBreve });
+registrar("/importar", { titulo: "Importar extrato", carregar: () => import("./telas/importar.js") });
+registrar("/conta", { titulo: "Em construção", carregar: emBreve });
 
 let mensagemPendente = null;
 

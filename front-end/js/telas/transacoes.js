@@ -39,7 +39,7 @@ function titulo(mes) {
   return mesAno(new Date(Date.UTC(mes.ano, mes.mes - 1, 15, 12)).toISOString());
 }
 
-export async function montar(raiz, { parametros }) {
+export async function montar(raiz, { parametros, navegar }) {
   const usuario = usuarioAtual();
   const fuso = usuario.fuso;
   const hojeLocal = hoje(fuso);
@@ -82,8 +82,12 @@ export async function montar(raiz, { parametros }) {
   });
   const exportar = el("button", { type: "button", class: "btn btn-secundario", title: "Baixar as transações filtradas em CSV" }, icone("baixar", "ic-sm"), el("span", { class: "rotulo-curto", texto: "Exportar" }));
   exportar.setAttribute("aria-label", "Exportar transações filtradas em CSV");
-  const importar = el("a", { class: "btn btn-secundario", href: "#/importar", title: "Importar extrato do banco" }, icone("enviar", "ic-sm"), el("span", { class: "rotulo-curto", texto: "Importar" }));
+  const importar = el("button", { type: "button", class: "btn btn-secundario", title: "Importar extrato do banco", "aria-haspopup": "dialog" }, icone("enviar", "ic-sm"), el("span", { class: "rotulo-curto", texto: "Importar" }));
   importar.setAttribute("aria-label", "Importar extrato do banco");
+  importar.addEventListener("click", async () => {
+    const { abrirImportacao } = await import("../importacao.js");
+    abrirImportacao({ aoConcluir: () => navegar("/importar") });
+  });
   const novaTransacao = el("button", { type: "button", class: "btn btn-primario tr-nova", "aria-haspopup": "dialog" }, icone("mais", "ic-sm"), "Nova transação");
   novaTransacao.addEventListener("click", () => abrirFormularioTransacao({ aoSalvar: () => carregar() }));
 

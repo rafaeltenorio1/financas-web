@@ -24,11 +24,12 @@ const SEM_CONEXAO = "Não foi possível falar com o servidor. Confira sua conex�
 const ERRO_GENERICO = "Algo deu errado do nosso lado. Tente de novo em instantes.";
 
 export class ErroApi extends Error {
-  constructor(status, mensagem, { campos = {}, esperarSegundos = null } = {}) {
+  constructor(status, mensagem, { campos = {}, esperarSegundos = null, detalhe = null } = {}) {
     super(mensagem);
     this.name = "ErroApi";
     this.status = status;
     this.campos = campos;
+    this.detalhe = detalhe;
     this.esperarSegundos = esperarSegundos;
   }
 }
@@ -63,6 +64,7 @@ function camposInvalidos(detalhe) {
 
 function mensagemDoErro(status, dados) {
   if (typeof dados?.detail === "string") return dados.detail;
+  if (typeof dados?.detail?.mensagem === "string") return dados.detail.mensagem;
   if (status === 422) return "Confira os campos destacados.";
   if (status === 401) return "Sua sessão expirou. Entre novamente.";
   if (status === 403) return "Requisição não permitida.";
@@ -123,6 +125,7 @@ async function requisitar(caminho, { metodo = "GET", corpo, sinal, formato = "js
   throw new ErroApi(resposta.status, mensagemDoErro(resposta.status, dados), {
     campos: resposta.status === 422 ? camposInvalidos(dados?.detail) : {},
     esperarSegundos: Number.isFinite(espera) && espera > 0 ? espera : null,
+    detalhe: dados?.detail ?? null,
   });
 }
 
