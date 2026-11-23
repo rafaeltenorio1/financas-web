@@ -350,10 +350,12 @@ a.painel-mes-seta:hover { background: var(--superficie-2); color: var(--texto); 
   position: fixed;
   z-index: 50;
   margin: 0;
-  box-shadow: var(--sombra);
-  opacity: 0.95;
+  background: var(--superficie);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.55);
   pointer-events: none;
   cursor: grabbing;
+  will-change: transform;
+  transform-origin: center;
 }
 .cartao-marcador {
   border: 2px dashed var(--destaque);

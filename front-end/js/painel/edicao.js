@@ -113,23 +113,16 @@ export function criarEdicao({ grade, adicionar, titulos, aplicarLayout, alturaEm
     adicionar.append(el("div", { class: "adicionar-rodape" }, padrao));
   }
 
-  function larguraPeloPonteiro(x, original) {
-    if (!desktop.matches || original === "inteiro") return original;
-    const caixa = grade.getBoundingClientRect();
-    const primeira = parseFloat(getComputedStyle(grade).gridTemplateColumns.split(" ")[0]);
-    return x < caixa.left + primeira + 9 ? "estreito" : "largo";
-  }
-
   function iniciarArraste(evento, id) {
     if (evento.pointerType === "mouse" && evento.button !== 0) return;
     evento.preventDefault();
     const alca = evento.currentTarget;
     const secao = secaoDe(id);
-    const original = rascunho.cartoes[posicao(id)].largura;
-    let largura = original;
+    const largura = rascunho.cartoes[posicao(id)].largura;
     const caixa = secao.getBoundingClientRect();
-    const deslocamento = { x: evento.clientX - caixa.left, y: evento.clientY - caixa.top };
-    let ponteiro = { x: evento.clientX, y: evento.clientY };
+    const inicio = { x: evento.clientX, y: evento.clientY };
+    let ponteiro = { ...inicio };
+    const suave = !matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const marcador = el("div", { class: `cartao-marcador t-${largura}`, "aria-hidden": "true" });
     marcador.style.height = `${caixa.height}px`;
@@ -141,34 +134,64 @@ export function criarEdicao({ grade, adicionar, titulos, aplicarLayout, alturaEm
     document.body.classList.add("arrastando-cartao");
     alca.setPointerCapture(evento.pointerId);
 
+    const outros = () => [...grade.querySelectorAll(".cartao:not(.arrastando)")];
+    const candidatos = () => outros().filter((outro) => !desktop.matches || largura === "inteiro" || outro.classList.contains(`t-${largura}`) || outro.classList.contains("t-inteiro"));
+    let posicoes = new Map();
+    function medir() {
+      posicoes = new Map(outros().map((o) => {
+        const r = o.getBoundingClientRect();
+        return [o, { top: r.top + scrollY, height: r.height }];
+      }));
+    }
+    medir();
+
+    function moverMarcador(mudar) {
+      const lista = outros();
+      const antes = new Map(lista.map((o) => [o, o.getBoundingClientRect()]));
+      for (const o of lista) o.getAnimations().forEach((a) => a.cancel());
+      mudar();
+      medir();
+      if (!suave) return;
+      for (const o of lista) {
+        const a = antes.get(o);
+        const d = o.getBoundingClientRect();
+        const dx = a.left - d.left;
+        const dy = a.top - d.top;
+        if (Math.abs(dx) < 1 && Math.abs(dy) < 1) continue;
+        o.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }], { duration: 200, easing: "cubic-bezier(0.2, 0, 0, 1)" });
+      }
+    }
+
     function posicionarCartao() {
-      secao.style.left = `${ponteiro.x - deslocamento.x}px`;
-      secao.style.top = `${ponteiro.y - deslocamento.y}px`;
+      secao.style.transform = `translate3d(${ponteiro.x - inicio.x}px, ${ponteiro.y - inicio.y}px, 0) scale(1.015)`;
     }
 
     function posicionarMarcador() {
-      largura = larguraPeloPonteiro(ponteiro.x, original);
-      marcador.className = `cartao-marcador t-${largura}`;
-      const candidatos = [...grade.querySelectorAll(".cartao:not(.arrastando)")].filter(
-        (outro) => !desktop.matches || largura === "inteiro" || outro.classList.contains(`t-${largura}`) || outro.classList.contains("t-inteiro"),
-      );
-      const alvo = candidatos.find((outro) => {
-        const r = outro.getBoundingClientRect();
-        return ponteiro.y < r.top + r.height / 2;
+      const lista = candidatos();
+      const y = ponteiro.y + scrollY;
+      const alvo = lista.find((outro) => {
+        const r = posicoes.get(outro);
+        return r && y < r.top + r.height / 2;
       });
       if (alvo) {
-        if (alvo.previousElementSibling !== marcador) alvo.before(marcador);
-      } else if (candidatos.length) {
-        const ultimo = candidatos.at(-1);
-        if (ultimo.nextElementSibling !== marcador) ultimo.after(marcador);
+        if (alvo.previousElementSibling !== marcador) moverMarcador(() => alvo.before(marcador));
+      } else if (lista.length) {
+        const ultimo = lista.at(-1);
+        if (ultimo.nextElementSibling !== marcador) moverMarcador(() => ultimo.after(marcador));
       }
     }
 
     let quadro = 0;
+    let pendente = false;
     function rolar() {
       const passo = ponteiro.y < MARGEM_ROLAGEM ? -VELOCIDADE_ROLAGEM : ponteiro.y > innerHeight - MARGEM_ROLAGEM ? VELOCIDADE_ROLAGEM : 0;
       if (passo) {
         scrollBy(0, passo);
+        pendente = true;
+      }
+      if (pendente) {
+        pendente = false;
+        posicionarCartao();
         posicionarMarcador();
       }
       quadro = requestAnimationFrame(rolar);
@@ -177,8 +200,7 @@ export function criarEdicao({ grade, adicionar, titulos, aplicarLayout, alturaEm
 
     function aoMover(e) {
       ponteiro = { x: e.clientX, y: e.clientY };
-      posicionarCartao();
-      posicionarMarcador();
+      pendente = true;
     }
 
     function terminar(cancelado) {
@@ -190,7 +212,7 @@ export function criarEdicao({ grade, adicionar, titulos, aplicarLayout, alturaEm
       document.body.classList.remove("arrastando-cartao");
       secao.classList.remove("arrastando");
       secao.inert = false;
-      for (const prop of ["width", "height", "left", "top"]) secao.style[prop] = "";
+      for (const prop of ["width", "height", "left", "top", "transform"]) secao.style[prop] = "";
       if (cancelado) {
         marcador.remove();
         anunciar("Movimento cancelado.");
@@ -198,11 +220,15 @@ export function criarEdicao({ grade, adicionar, titulos, aplicarLayout, alturaEm
         marcador.replaceWith(secao);
         const ordem = [...grade.querySelectorAll(".cartao")].map((s) => s.dataset.cartao);
         const larguras = Object.fromEntries(rascunho.cartoes.map((c) => [c.id, c.largura]));
-        larguras[id] = largura;
         rascunho.cartoes = ordem.map((cid) => ({ id: cid, largura: larguras[cid] }));
         atualizar();
-        const coluna = desktop.matches && largura !== original ? `, agora na ${ROTULO_LARGURA[largura].toLowerCase()}` : "";
-        anunciar(`${titulo(id)} na posição ${posicao(id) + 1} de ${rascunho.cartoes.length}${coluna}.`);
+        if (suave) {
+          const final = secao.getBoundingClientRect();
+          const dx = ponteiro.x - inicio.x + caixa.left - final.left;
+          const dy = ponteiro.y - inicio.y + caixa.top - final.top;
+          if (Math.abs(dx) > 1 || Math.abs(dy) > 1) secao.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }], { duration: 180, easing: "cubic-bezier(0.2, 0, 0, 1)" });
+        }
+        anunciar(`${titulo(id)} na posição ${posicao(id) + 1} de ${rascunho.cartoes.length}.`);
       }
       alca.focus();
     }
