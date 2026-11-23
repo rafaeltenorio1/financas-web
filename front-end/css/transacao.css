@@ -1,0 +1,153 @@
+.form-transacao {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--fundo);
+  color: var(--texto);
+  overscroll-behavior: contain;
+}
+.form-transacao::backdrop { background: rgba(5, 31, 32, 0.65); }
+.form-transacao form { display: flex; flex-direction: column; min-height: 100%; }
+.ft-corpo { flex: 1; padding: var(--esp-4) var(--esp-4) var(--esp-6); }
+.ft-topo { display: flex; align-items: center; gap: var(--esp-2); margin: 0 calc(-1 * var(--esp-2)) 18px; }
+.ft-topo h2 { font-size: var(--texto-lg); }
+
+.ft-valor { padding: 18px; border-radius: var(--raio-lg); background: var(--superficie); border: 1px solid var(--borda); }
+.ft-tipo { display: grid; grid-template-columns: 1fr 1fr; padding: 4px; border-radius: 16px; background: var(--fundo); border: 1px solid var(--borda); }
+.ft-tipo button { display: flex; align-items: center; justify-content: center; gap: var(--esp-2); min-height: 44px; border-radius: 12px; font-weight: 700; color: var(--texto-suave); }
+.ft-tipo button:hover { color: var(--texto); }
+.ft-tipo button[aria-pressed="true"].despesa { background: color-mix(in srgb, var(--despesa) 18%, transparent); color: var(--despesa); }
+.ft-tipo button[aria-pressed="true"].receita { background: color-mix(in srgb, var(--receita) 18%, transparent); color: var(--receita); }
+.ft-valor label { display: block; margin: 14px 0 2px; font-size: 0.9rem; font-weight: 600; color: var(--texto-suave); }
+.ft-valor input {
+  width: 100%;
+  border: 0;
+  outline: none;
+  background: none;
+  font: 800 clamp(2.4rem, 11vw, 3.3rem) / 1.05 var(--fonte);
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  caret-color: var(--destaque);
+}
+.ft-valor input:focus-visible { box-shadow: 0 2px 0 var(--destaque); }
+.form-transacao[data-tipo="despesa"] .ft-valor input { color: var(--despesa); }
+.form-transacao[data-tipo="receita"] .ft-valor input { color: var(--receita); }
+.ft-valor input[aria-invalid="true"] { box-shadow: 0 2px 0 var(--despesa); }
+
+.ft-secao { margin-top: 22px; }
+.ft-secao > h3, .ft-rotulo { display: block; margin-bottom: 10px; font-size: 0.95rem; font-weight: 700; }
+.ft-chips { display: flex; flex-wrap: wrap; gap: var(--esp-2); }
+.ft-chip {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: var(--raio-pilula);
+  border: 1.5px solid var(--borda);
+  font-size: var(--texto-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ft-chip:hover { border-color: var(--borda-forte); }
+.ft-chip[aria-pressed="true"] { background: var(--claro); color: var(--no-claro); border-color: var(--claro); }
+.ft-data { margin-top: 10px; max-width: 220px; color-scheme: dark; }
+
+.ft-busca { position: relative; margin-bottom: 10px; }
+.ft-busca .ic-sm { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--texto-suave); pointer-events: none; }
+.ft-busca .entrada { padding-left: 42px; }
+.ft-cats { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--esp-2); }
+.ft-cat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 7px 10px 7px 7px;
+  border-radius: var(--raio-md);
+  border: 1.5px solid var(--borda);
+  background: var(--fundo);
+  text-align: left;
+  font-size: 0.86rem;
+  font-weight: 600;
+  min-width: 0;
+}
+.ft-cat:hover { border-color: var(--borda-forte); }
+.ft-cat[aria-pressed="true"] { border-color: var(--cor); background: color-mix(in srgb, var(--cor) 14%, var(--fundo)); }
+.ft-cat span:last-child { min-width: 0; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 1.25; }
+.ft-cat-ic {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--cor) 18%, transparent);
+  color: var(--cor);
+}
+.ft-cat-ic .ic { width: 18px; height: 18px; }
+.ft-cats-nota { margin-top: var(--esp-2); font-size: var(--texto-xs); color: var(--texto-suave); }
+.ft-cats-nota button { color: var(--texto); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+
+.form-transacao details summary { padding: 6px 0; cursor: pointer; font-weight: 700; color: var(--texto-suave); }
+.form-transacao details summary:hover { color: var(--texto); }
+.form-transacao textarea.entrada { min-height: 90px; padding: var(--esp-3) var(--esp-4); resize: vertical; margin-top: var(--esp-2); }
+
+.ft-rodape {
+  position: sticky;
+  bottom: 0;
+  padding: var(--esp-3) var(--esp-4) calc(var(--esp-4) + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--borda);
+  background: var(--fundo);
+}
+.ft-impacto:empty { display: none; }
+.ft-impacto { margin-bottom: var(--esp-2); font-size: 0.84rem; color: var(--texto-suave); }
+.ft-impacto strong { color: var(--texto); font-variant-numeric: tabular-nums; }
+.ft-impacto.alerta strong { color: var(--aviso); }
+.ft-rodape .btn { width: 100%; min-height: 52px; font-size: 1.02rem; }
+.ft-rodape .mensagem { margin-bottom: var(--esp-2); }
+
+@media (min-width: 900px) {
+  .form-transacao {
+    inset: 0 0 0 auto;
+    width: 500px;
+    border-left: 1px solid var(--borda);
+    background: var(--superficie);
+    box-shadow: var(--sombra);
+  }
+  .ft-corpo { padding: 22px 26px var(--esp-6); }
+  .ft-valor { background: var(--fundo); }
+  .ft-cats { grid-template-columns: 1fr 1fr; }
+  .ft-rodape { padding: var(--esp-3) 26px 22px; background: var(--superficie); }
+}
+
+.avisos {
+  position: fixed;
+  z-index: 100;
+  left: 50%;
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(460px, calc(100vw - 32px));
+}
+.aviso-flutuante {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-3);
+  padding: var(--esp-3) var(--esp-2) var(--esp-3) var(--esp-4);
+  border-radius: var(--raio-md);
+  background: var(--claro);
+  color: var(--no-claro);
+  box-shadow: var(--sombra);
+  font-size: var(--texto-sm);
+  font-weight: 600;
+}
+.aviso-flutuante > span { flex: 1; }
+.aviso-sucesso .ic-sm { color: var(--receita-escura); }
+.aviso-erro .ic-sm { color: var(--despesa-escura); }
+.aviso-acao { padding: 6px 10px; border-radius: var(--raio-sm); font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
+.aviso-acao:hover { background: rgba(5, 31, 32, 0.08); }
+.aviso-fechar { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; color: var(--no-claro-suave); }
+.aviso-fechar:hover { background: rgba(5, 31, 32, 0.08); }
+@media (min-width: 900px) {
+  .avisos { left: auto; right: 24px; bottom: 24px; transform: none; }
+}

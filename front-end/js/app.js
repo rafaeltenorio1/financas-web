@@ -1,5 +1,5 @@
 import { el, icone } from "./dom.js";
-import { registrar, iniciarRotas, navegar, caminhoAtual } from "./rotas.js";
+import { registrar, iniciarRotas, navegar, caminhoAtual, recarregar } from "./rotas.js";
 import { usuarioAtual, encerrarLocalmente, sair } from "./sessao.js";
 
 const ITENS_NAV = [
@@ -19,7 +19,8 @@ registrar("/esqueci-senha", { publica: true, soDeslogado: true, titulo: "Esqueci
 registrar("/redefinir-senha", { publica: true, titulo: "Criar senha nova", carregar: () => import("./telas/redefinir-senha.js") });
 registrar("/verificar-email", { publica: true, titulo: "Confirmar e-mail", carregar: () => import("./telas/verificar-email.js") });
 registrar("/confirmar-email", { publica: true, titulo: "Confirmar e-mail novo", carregar: () => import("./telas/confirmar-email.js") });
-for (const caminho of ["/transacoes", "/nova", "/contas", "/conta"]) registrar(caminho, { titulo: "Em construção", carregar: emBreve });
+registrar("/nova", { titulo: "Nova transação", carregar: () => import("./telas/nova.js") });
+for (const caminho of ["/transacoes", "/contas", "/conta"]) registrar(caminho, { titulo: "Em construção", carregar: emBreve });
 
 let mensagemPendente = null;
 
@@ -33,14 +34,22 @@ function navegacao(caminho) {
   const nav = el("nav", { class: "nav", "aria-label": "Principal" }, el("a", { class: "nav-marca", href: "#/", texto: "Finanças", translate: "no" }));
   for (const item of ITENS_NAV) {
     const atual = item.caminho === caminho;
-    nav.append(
-      el(
-        "a",
-        { class: `nav-item${item.novo ? " nav-novo" : ""}`, href: `#${item.caminho}`, "aria-current": atual ? "page" : null },
-        icone(item.icone),
-        el("span", { texto: item.rotulo }),
-      ),
+    const link = el(
+      "a",
+      { class: `nav-item${item.novo ? " nav-novo" : ""}`, href: `#${item.caminho}`, "aria-current": atual ? "page" : null },
+      icone(item.icone),
+      el("span", { texto: item.rotulo }),
     );
+    if (item.novo) {
+      link.setAttribute("aria-haspopup", "dialog");
+      link.addEventListener("click", async (evento) => {
+        if (evento.ctrlKey || evento.metaKey || evento.shiftKey || evento.button !== 0) return;
+        evento.preventDefault();
+        const { abrirFormularioTransacao } = await import("./transacao-form.js");
+        abrirFormularioTransacao({ aoSalvar: () => recarregar() });
+      });
+    }
+    nav.append(link);
   }
   const sair = el("button", { type: "button", class: "nav-item nav-sair" }, icone("sair"), el("span", { texto: "Sair" }));
   sair.addEventListener("click", sairDaConta);
