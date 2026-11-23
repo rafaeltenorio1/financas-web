@@ -1,0 +1,29 @@
+.medidor-trilho span, .categoria-trilho span { transform-origin: left center; animation: barra-cresce 0.75s cubic-bezier(0.2, 0, 0, 1) 0.1s both; }
+.categorias > li:nth-child(2) .categoria-trilho span { animation-delay: 0.16s; }
+.categorias > li:nth-child(3) .categoria-trilho span { animation-delay: 0.22s; }
+.categorias > li:nth-child(4) .categoria-trilho span { animation-delay: 0.28s; }
+.categorias > li:nth-child(n + 5) .categoria-trilho span { animation-delay: 0.34s; }
+.grafico .barra path { transform-box: fill-box; transform-origin: 50% 100%; animation: coluna-sobe 0.7s cubic-bezier(0.2, 0, 0, 1) 0.1s both; }
+@keyframes barra-cresce { from { transform: scaleX(0); } }
+@keyframes coluna-sobe { from { transform: scaleY(0); } }
+
+.destaque-novo { animation: destaque-novo 1.6s ease-out; }
+@keyframes destaque-novo {
+  0%, 35% { background-color: color-mix(in srgb, var(--destaque) 24%, transparent); }
+  100% { background-color: transparent; }
+}
+
+.ct-detalhe, .tr-lista .tr-detalhe { animation: detalhe-abre 0.24s cubic-bezier(0.2, 0, 0, 1); }
+@keyframes detalhe-abre { from { opacity: 0; transform: translateY(-6px); } }
+
+.aviso-flutuante { animation: aviso-entra 0.26s cubic-bezier(0.2, 0, 0, 1); }
+@keyframes aviso-entra { from { opacity: 0; transform: translateY(14px); } }
+
+.sem-animacoes *, .sem-animacoes *::before, .sem-animacoes *::after {
+  animation-duration: 0.01ms !important;
+  animation-delay: 0s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  transition-delay: 0s !important;
+  scroll-behavior: auto !important;
+}

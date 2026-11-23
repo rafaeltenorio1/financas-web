@@ -9,6 +9,7 @@ import { carregarIconesDasContas } from "../contas-icones.js";
 import { abrirFormularioTransacao, esquecerCachesDoFormulario } from "../transacao-form.js";
 import { avisar } from "../avisos.js";
 import { confirmar } from "../confirmar.js";
+import { animarNumeros, destacar, entrarDoLado, recolher } from "../movimento.js";
 
 const POR_PAGINA = 50;
 const CHAVE_MODO = "transacoes-detalhe";
@@ -60,6 +61,7 @@ export async function montar(raiz, { parametros }) {
   let resumo = null;
   let totaisApi = null;
   let aberta = null;
+  let direcaoMes = 0;
   let controle = null;
   let carregandoMais = false;
 
@@ -89,7 +91,7 @@ export async function montar(raiz, { parametros }) {
     abrirImportacao({ aoImportar: () => carregar() });
   });
   const novaTransacao = el("button", { type: "button", class: "btn btn-primario tr-nova", "aria-haspopup": "dialog" }, icone("mais", "ic-sm"), "Nova transação");
-  novaTransacao.addEventListener("click", () => abrirFormularioTransacao({ aoSalvar: () => carregar() }));
+  novaTransacao.addEventListener("click", () => abrirFormularioTransacao({ aoSalvar: (salva) => carregarEDestacar(salva) }));
 
   const busca = el("input", { type: "search", class: "entrada", id: "tr-busca", name: "busca", autocomplete: "off", spellcheck: "false", maxlength: 100, placeholder: "Buscar", "aria-describedby": "tr-ajuda" });
   busca.value = filtros.busca;
@@ -221,8 +223,8 @@ export async function montar(raiz, { parametros }) {
   function desenharResumo() {
     resumoEl.replaceChildren();
     if (!totaisApi) return;
-    if (filtros.tipo !== "receita") resumoEl.append(el("div", {}, el("dt", { texto: "Gastos" }), el("dd", { class: "despesa num", texto: moeda(totaisApi.despesas) })));
-    if (filtros.tipo !== "despesa") resumoEl.append(el("div", {}, el("dt", { texto: "Ganhos" }), el("dd", { class: "receita num", texto: moeda(totaisApi.receitas) })));
+    if (filtros.tipo !== "receita") resumoEl.append(el("div", {}, el("dt", { texto: "Gastos" }), el("dd", { class: "despesa num", "data-valor": totaisApi.despesas, texto: moeda(totaisApi.despesas) })));
+    if (filtros.tipo !== "despesa") resumoEl.append(el("div", {}, el("dt", { texto: "Ganhos" }), el("dd", { class: "receita num", "data-valor": totaisApi.receitas, texto: moeda(totaisApi.receitas) })));
     const n = totaisApi.quantidade;
     resumoEl.append(el("p", { class: "tr-resumo-nota", texto: `${n} ${n === 1 ? "transação" : "transações"}` }));
   }
@@ -258,7 +260,7 @@ export async function montar(raiz, { parametros }) {
         transacao,
         aoSalvar: (salva) => {
           aberta = salva ? salva.id_transacao : null;
-          carregar();
+          carregarEDestacar(salva);
         },
       });
     });
@@ -271,6 +273,8 @@ export async function montar(raiz, { parametros }) {
       try {
         await api.delete(`/transacoes/${transacao.id_transacao}`);
         esquecerCachesDoFormulario();
+        const linhaApagada = lista.querySelector(`.tr-linha[data-id="${CSS.escape(transacao.id_transacao)}"]`);
+        await Promise.all([recolher(linhaApagada), recolher(linhaApagada?.nextElementSibling?.classList.contains("tr-detalhe") ? linhaApagada.nextElementSibling : null)]);
         aberta = null;
         avisar("Transação apagada.");
         carregar();
@@ -426,7 +430,15 @@ export async function montar(raiz, { parametros }) {
     desenharCategorias();
     desenharResumo();
     desenharLista();
+    animarNumeros(resumoEl);
+    entrarDoLado(lista, direcaoMes);
+    direcaoMes = 0;
     anuncio.textContent = totaisApi.quantidade ? `${totaisApi.quantidade} ${totaisApi.quantidade === 1 ? "transação encontrada" : "transações encontradas"}.` : "Nenhuma transação encontrada.";
+  }
+
+  async function carregarEDestacar(salva) {
+    await carregar();
+    if (salva?.id_transacao) destacar(lista.querySelector(`.tr-linha[data-id="${CSS.escape(salva.id_transacao)}"]`));
   }
 
   async function carregarMais() {
@@ -464,12 +476,14 @@ export async function montar(raiz, { parametros }) {
     }, 350);
   });
   voltarMes.addEventListener("click", () => {
+    direcaoMes = -1;
     filtros.mes = somarMeses(filtros.mes, -1);
     filtros.categoria = null;
     aplicarFiltros();
   });
   avancarMes.addEventListener("click", () => {
     if (compararMeses(filtros.mes, mesAtual) >= 0) return;
+    direcaoMes = 1;
     filtros.mes = somarMeses(filtros.mes, 1);
     filtros.categoria = null;
     aplicarFiltros();
@@ -518,7 +532,7 @@ export async function montar(raiz, { parametros }) {
   await carregar();
   if (transacaoExtra && !itens.some((t) => t.id_transacao === aberta) && !emColuna()) {
     const alvo = transacaoExtra;
-    abrirFormularioTransacao({ transacao: alvo, aoSalvar: () => carregar() });
+    abrirFormularioTransacao({ transacao: alvo, aoSalvar: (salva) => carregarEDestacar(salva) });
   }
   if (parametros.get("importar")) {
     atualizarUrl();

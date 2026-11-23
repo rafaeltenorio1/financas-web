@@ -58,7 +58,7 @@ export default {
         item.append(el("dd", { texto: resultado.indisponivel }));
       } else {
         const detalhe = resultado.data ? `${resultado.detalhe}, ${dataCurta(resultado.data)}` : resultado.detalhe;
-        item.append(el("dd", { class: "num" }, resultado.texto ?? moeda(resultado.valor), el("small", { texto: detalhe })));
+        item.append(el("dd", { class: "num" }, resultado.texto ? resultado.texto : el("span", { "data-valor": resultado.valor, texto: moeda(resultado.valor) }), el("small", { texto: detalhe })));
       }
       lista.append(item);
     }

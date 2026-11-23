@@ -3,6 +3,7 @@ import { el, icone } from "../dom.js";
 import { usuarioAtual } from "../sessao.js";
 import { carregarCategorias, corDaCategoria, simboloDaCategoria } from "../categorias.js";
 import { abrirFormularioCategoria, PASTEIS } from "../categoria-form.js";
+import { destacar, recolher } from "../movimento.js";
 import { chaveDoMes, hoje, inicioDoMes, somarMeses } from "../datas.js";
 import { moeda } from "../formatos.js";
 
@@ -69,7 +70,10 @@ export async function montar(raiz, { parametros }) {
       tipo: estado.tipo === "todas" ? "despesa" : estado.tipo,
       corSugerida: corSugerida(),
       aoSalvar: (salva) => recarregar(salva.id_categoria),
-      aoApagar: () => recarregar(),
+      aoApagar: async (apagada) => {
+        await recolher(conteudo.querySelector(`[data-id="${CSS.escape(apagada.id_categoria)}"]`)?.closest("li"));
+        recarregar();
+      },
     });
   }
   nova.addEventListener("click", () => abrirEditor());
@@ -185,7 +189,11 @@ export async function montar(raiz, { parametros }) {
     const salva = focarId && estado.categorias.find((c) => c.id_categoria === focarId);
     if (salva?.tipo_padrao && estado.tipo !== "todas" && salva.tipo_padrao !== estado.tipo) escolherTipo(salva.tipo_padrao);
     desenhar();
-    if (focarId) conteudo.querySelector(`[data-id="${CSS.escape(focarId)}"]`)?.focus();
+    const ficha = focarId ? conteudo.querySelector(`[data-id="${CSS.escape(focarId)}"]`) : null;
+    if (ficha) {
+      ficha.focus();
+      destacar(ficha);
+    }
   }
 
   busca.addEventListener("input", () => {

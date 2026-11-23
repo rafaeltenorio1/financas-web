@@ -7,6 +7,7 @@ import { moeda } from "../formatos.js";
 import { iconeDaTransacao } from "../painel/componentes.js";
 import { avisar } from "../avisos.js";
 import { confirmar } from "../confirmar.js";
+import { animacoesLigadas, recolher } from "../movimento.js";
 import { abrirFormularioConta, FORMAS } from "../conta-form.js";
 import { esquecerCachesDoFormulario } from "../transacao-form.js";
 
@@ -235,6 +236,7 @@ export async function montar(raiz) {
     if (!sim) return;
     try {
       await api.delete(`/contas-recorrentes/${conta.id_conta_recorrente}`);
+      await recolher(grade.querySelector(`[data-conta="${CSS.escape(conta.id_conta_recorrente)}"]`));
       avisar(`Conta ${conta.nome} apagada.`);
       carregar();
     } catch (erro) {
@@ -299,6 +301,11 @@ export async function montar(raiz) {
           forma_pagamento: forma.value || null,
         });
         esquecerCachesDoFormulario();
+        ocupado(botaoConfirmar, false);
+        botaoConfirmar.replaceChildren(icone("sucesso", "ic-sm"), recebimento ? "Recebido" : "Pago");
+        botaoConfirmar.classList.add("feito");
+        if (animacoesLigadas()) await new Promise((resolver) => setTimeout(resolver, 450));
+        await recolher(form.closest(".ct-conta"));
         pagarAberto = null;
         const proximo = resultado.conta.ativa ? ` Próximo vencimento: ${dataCurta(resultado.conta.proximo_vencimento)}.` : " Era o último vencimento.";
         avisar(`${conta.nome}: ${moeda(resultado.transacao.valor)} ${recebimento ? "recebido" : "pago"}.${proximo}`);

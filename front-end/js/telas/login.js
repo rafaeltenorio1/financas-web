@@ -3,6 +3,7 @@ import { DESAFIO_2FA_MIN } from "../config.js";
 import { el, icone, mensagem, ocupado } from "../dom.js";
 import { definirUsuario } from "../sessao.js";
 import { mensagemParaProximaTela } from "../app.js";
+import { tremer } from "../movimento.js";
 import { telaAuth, selo, campo, campoSenha, marcarErro, destinoSeguro } from "./auth-comum.js";
 
 const EMAIL_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -157,6 +158,7 @@ export async function montar(raiz, { parametros, navegar }) {
         senha.entrada.value = "";
         senha.entrada.setAttribute("aria-invalid", "true");
         senha.entrada.focus();
+        tremer(senha.entrada);
       } else if (erro.status === 429) {
         mensagem(avisoSenha, "aviso", textoDeEspera(erro));
       } else {
@@ -201,6 +203,7 @@ export async function montar(raiz, { parametros, navegar }) {
         codigo.entrada.select();
         codigo.entrada.setAttribute("aria-invalid", "true");
         codigo.entrada.focus();
+        tremer(codigo.entrada);
       } else if (erro.status === 429) {
         mensagem(aviso2fa, "aviso", textoDeEspera(erro));
       } else {

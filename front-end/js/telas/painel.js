@@ -1,4 +1,7 @@
 import { confirmar } from "../confirmar.js";
+import { animarNumeros, entrarDoLado } from "../movimento.js";
+
+let ultimoMesVisto = null;
 import { el, icone, mensagem, ocupado } from "../dom.js";
 import { usuarioAtual } from "../sessao.js";
 import { definirGuardaDeSaida } from "../rotas.js";
@@ -67,6 +70,9 @@ export async function montar(raiz, { parametros }) {
   const status = el("div", { class: "mensagem", role: "alert" });
   const avisoSlot = el("div");
   const grade = el("div", { class: "painel" });
+  const direcaoDoMes = ultimoMesVisto ? Math.sign(compararMeses(mes, ultimoMesVisto)) : 0;
+  ultimoMesVisto = mes;
+  requestAnimationFrame(() => entrarDoLado(grade, direcaoDoMes));
   const adicionar = el("section", { class: "adicionar" });
   const botoes = el("div", { class: "painel-botoes" });
   const cabecalhoTela = el("header", { class: "painel-cab" }, navegacaoDoMes(mes, contexto.atual), botoes);
@@ -123,6 +129,7 @@ export async function montar(raiz, { parametros }) {
       salvarAgora,
       aoDesmontar: (limpar) => limpezas.get(id).push(limpar),
     });
+    animarNumeros(conteudo);
   }
 
   async function recarregar(id) {

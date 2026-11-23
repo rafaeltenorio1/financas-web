@@ -12,7 +12,7 @@ export default {
     cartao.setAttribute("aria-labelledby", id);
     cartao.append(
       el("h2", { class: "saldo-rotulo", id, texto: "Saldo do mês" }),
-      el("p", { class: `saldo-valor num${valores.saldo < 0 ? " negativo" : ""}`, texto: moeda(valores.saldo) }),
+      el("p", { class: `saldo-valor num${valores.saldo < 0 ? " negativo" : ""}`, "data-valor": valores.saldo, texto: moeda(valores.saldo) }),
     );
     if (valores.gastoPct === null) {
       cartao.append(el("p", { class: "saldo-frase", texto: valores.despesas > 0 ? "Nenhum ganho registrado neste mês." : "Nenhuma transação neste mês." }));

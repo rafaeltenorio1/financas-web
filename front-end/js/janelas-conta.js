@@ -3,6 +3,7 @@ import { el, icone, mensagem, ocupado } from "./dom.js";
 import { avisar } from "./avisos.js";
 import { definirUsuario, encerrarLocalmente, usuarioAtual } from "./sessao.js";
 import { desenharQr } from "./qr.js";
+import { tremer } from "./movimento.js";
 
 function janela({ titulo, aoFechar, pedirFechamento }) {
   const origemDoFoco = document.activeElement;
@@ -73,6 +74,7 @@ function tratarErro(j, erro, campoSenhaOuCodigo) {
   if (erro.status === 401 && campoSenhaOuCodigo) {
     campoSenhaOuCodigo.marcar(erro.message);
     campoSenhaOuCodigo.entrada.focus();
+    tremer(campoSenhaOuCodigo.entrada);
     return;
   }
   j.erro(erro.message);

@@ -2,6 +2,9 @@ import { el, icone } from "./dom.js";
 import { registrar, iniciarRotas, navegar, caminhoAtual, recarregar } from "./rotas.js";
 import { usuarioAtual, encerrarLocalmente, sair } from "./sessao.js";
 import { logo } from "./logo.js";
+import { animacoesLigadas, aplicarPreferenciaDeAnimacoes } from "./movimento.js";
+
+aplicarPreferenciaDeAnimacoes();
 
 const ITENS_NAV = [
   { caminho: "/", rotulo: "Painel", icone: "painel" },
@@ -109,7 +112,7 @@ const fimDaAbertura = new Promise((resolver) => {
 function tirarAbertura() {
   const abertura = document.getElementById("abertura");
   if (!abertura) return document.documentElement.classList.remove("abrindo");
-  fimDaAbertura.then(() => {
+  (animacoesLigadas() ? fimDaAbertura : Promise.resolve()).then(() => {
     document.documentElement.classList.remove("abrindo");
     abertura.classList.add("saindo");
     setTimeout(() => abertura.remove(), 400);

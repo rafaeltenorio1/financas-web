@@ -152,3 +152,5 @@ button.ct-dia:hover { background: var(--superficie-2); }
 .si-opcao[aria-pressed="true"] { border-color: var(--texto); background: var(--superficie-2); }
 .si-auto { margin-top: 4px; padding: 0; gap: 6px; }
 .si-auto[hidden] { display: none; }
+
+.ct-pagar .btn.feito { background: var(--receita); border-color: var(--receita); color: var(--no-claro); }

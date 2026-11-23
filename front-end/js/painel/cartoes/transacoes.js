@@ -54,12 +54,12 @@ export default {
         "button",
         { type: "button", class: `aba aba-${tipo}`, role: "tab", id: idAba, "aria-controls": idColuna, "aria-selected": String(i === 0), tabindex: i === 0 ? "0" : "-1" },
         el("span", { class: "aba-rotulo" }, icone(simbolo, "ic-sm"), rotulo),
-        el("span", { class: "aba-valor num", texto: moeda(total) }),
+        el("span", { class: "aba-valor num", "data-valor": total, texto: moeda(total) }),
       );
       const coluna = el(
         "div",
         { class: `coluna${i === 0 ? "" : " oculta"}`, id: idColuna, role: "tabpanel", "aria-labelledby": idAba },
-        el("div", { class: `coluna-total tx-${tipo}` }, el("p", {}, icone(simbolo, "ic-sm"), rotulo), el("p", { class: "num tx-valor", texto: moeda(total) })),
+        el("div", { class: `coluna-total tx-${tipo}` }, el("p", {}, icone(simbolo, "ic-sm"), rotulo), el("p", { class: "num tx-valor", "data-valor": total, texto: moeda(total) })),
         itens.length ? lista(itens.slice(0, 6)) : vazio(textoVazio),
       );
       botoes.push([aba, coluna]);

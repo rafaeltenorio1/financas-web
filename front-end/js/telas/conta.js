@@ -3,6 +3,7 @@ import { el, icone } from "../dom.js";
 import { avisar } from "../avisos.js";
 import { definirUsuario, usuarioAtual } from "../sessao.js";
 import { sairDaConta } from "../app.js";
+import { animacoesLigadas, definirAnimacoes } from "../movimento.js";
 import { janelaDoisFatores, janelaEmail, janelaExcluir, janelaFuso, janelaNome, janelaSenha, nomeDoFuso } from "../janelas-conta.js";
 
 const DIAS = [0, 1, 2, 3, 5, 7];
@@ -10,6 +11,7 @@ const EXPLICACOES = {
   antes: "Um e-mail chega alguns dias antes de cada conta vencer, a partir das 8h no seu fuso. Vale para as contas com o sino ligado na tela Contas.",
   dia: "No dia do vencimento, um e-mail lista as contas que vencem hoje e ainda não foram pagas.",
   atraso: "No dia seguinte ao vencimento, se a conta não foi marcada como paga, você recebe um aviso.",
+  animacoes: "Liga ou desliga os movimentos do site: a logo da abertura, números contando, gráficos crescendo, janelas e avisos deslizando. Vale só neste aparelho e navegador.",
   resumo: "Nos primeiros dias de cada mês, um e-mail com o total de gastos e ganhos do mês anterior, as maiores categorias e as contas do mês. Meses sem transações não geram e-mail.",
 };
 
@@ -57,6 +59,22 @@ export async function montar(raiz, { navegar }) {
       el("span", { class: "cf-ic", "aria-hidden": "true" }, icone(id === "resumo" ? "painel" : id === "atraso" ? "alerta" : "contas")),
       el("span", { class: "cf-texto" }, el("label", { for: `cf-${id}`, class: "cf-titulo", texto: rotulo }), dica(id, rotulo)),
       el("label", { class: "cf-chave", for: `cf-${id}` }, caixa, el("span", { class: "interruptor", "aria-hidden": "true" })),
+    );
+  }
+
+  function interruptorAnimacoes() {
+    const caixa = el("input", { type: "checkbox", role: "switch", id: "cf-animacoes", name: "animacoes" });
+    caixa.checked = animacoesLigadas();
+    caixa.addEventListener("change", () => {
+      definirAnimacoes(caixa.checked);
+      avisar(caixa.checked ? "Animações ligadas neste aparelho." : "Animações desligadas neste aparelho.");
+    });
+    return el(
+      "div",
+      { class: "cf-item cf-item-chave" },
+      el("span", { class: "cf-ic", "aria-hidden": "true" }, icone("ajustes")),
+      el("span", { class: "cf-texto" }, el("label", { for: "cf-animacoes", class: "cf-titulo", texto: "Animações" }), dica("animacoes", "Animações")),
+      el("label", { class: "cf-chave", for: "cf-animacoes" }, caixa, el("span", { class: "interruptor", "aria-hidden": "true" })),
     );
   }
 
@@ -158,6 +176,7 @@ export async function montar(raiz, { navegar }) {
           linha({ ic: "contas", titulo: "Fuso horário", descricao: "Hora dos avisos e virada do mês", valor: nomeDoFuso(u.fuso), aoClicar: () => janelaFuso({ aoSalvar: desenhar }) }),
         ),
       ),
+      secao("Neste aparelho", interruptorAnimacoes()),
       secao(
         "Mais",
         linha({ ic: "categorias", titulo: "Categorias", descricao: "Criar e editar as suas", href: "#/categorias" }),

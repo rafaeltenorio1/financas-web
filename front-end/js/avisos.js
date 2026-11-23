@@ -1,4 +1,5 @@
 import { el, icone } from "./dom.js";
+import { animacoesLigadas } from "./movimento.js";
 
 let regiao = null;
 
@@ -15,7 +16,9 @@ export function avisar(texto, { acao, duracao = 6000, tipo = "sucesso" } = {}) {
   let temporizador = null;
   const fechar = () => {
     clearTimeout(temporizador);
-    caixa.remove();
+    if (!caixa.isConnected) return;
+    if (!animacoesLigadas()) return caixa.remove();
+    caixa.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateY(8px)" }], { duration: 200, easing: "ease-in" }).finished.then(() => caixa.remove(), () => caixa.remove());
   };
   if (acao) {
     const botao = el("button", { type: "button", class: "aviso-acao", texto: acao.texto });
