@@ -223,4 +223,21 @@ export async function montar(raiz, { parametros, navegar }) {
   const pendente = mensagemParaProximaTela();
   if (pendente) mensagem(avisoSenha, pendente.tipo, pendente.texto);
   email.entrada.setAttribute("data-foco-inicial", "");
+
+  if (location.hostname === "localhost") {
+    import("../dev.js")
+      .then(({ CONTA_TESTE }) => {
+        if (!CONTA_TESTE?.email) return;
+        const usar = el("button", { type: "button", class: "btn btn-texto", texto: "Usar conta de teste" });
+        usar.addEventListener("click", () => {
+          email.entrada.value = CONTA_TESTE.email;
+          senha.entrada.value = CONTA_TESTE.senha;
+          marcarErro(email, "");
+          marcarErro(senha, "");
+          entrar.focus();
+        });
+        formSenha.after(el("p", { class: "auth-rodape" }, usar, " (só em desenvolvimento)"));
+      })
+      .catch(() => {});
+  }
 }
