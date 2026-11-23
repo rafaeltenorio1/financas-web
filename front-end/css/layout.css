@@ -52,8 +52,7 @@ html { scroll-padding-bottom: 104px; }
   .app { display: grid; grid-template-columns: var(--largura-nav) 1fr; }
   .nav {
     position: sticky;
-    top: 0;
-    inset: auto;
+    inset: 0 auto auto 0;
     height: 100vh;
     flex-direction: column;
     justify-content: flex-start;
@@ -82,6 +81,7 @@ html { scroll-padding-bottom: 104px; }
   .nav-novo:hover { background: var(--claro); color: var(--no-destaque); }
   .nav-novo span { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
   .nav-lateral { display: flex; }
+  .nav-novo.nav-novo-na-tela { display: none; }
   .nav-sair { display: flex; margin-top: auto; }
   .conteudo { padding: 36px var(--esp-12) var(--esp-12); }
 }
