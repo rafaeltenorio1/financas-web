@@ -126,6 +126,36 @@ async function requisitar(caminho, { metodo = "GET", corpo, sinal, formato = "js
   });
 }
 
+export async function baixarArquivo(caminho, nomePadrao) {
+  let resposta;
+  try {
+    resposta = await fetch(API_URL + caminho, { credentials: "include", headers: { Accept: "text/csv" } });
+  } catch {
+    throw new ErroApi(0, SEM_CONEXAO);
+  }
+  if (!resposta.ok) {
+    let dados = null;
+    try {
+      dados = await resposta.json();
+    } catch {
+      dados = null;
+    }
+    if (resposta.status === 401) window.dispatchEvent(new CustomEvent("sessao-expirada"));
+    throw new ErroApi(resposta.status, mensagemDoErro(resposta.status, dados));
+  }
+  const cabecalho = resposta.headers.get("Content-Disposition") || "";
+  const nome = /filename="([^"]+)"/.exec(cabecalho)?.[1] ?? nomePadrao;
+  const url = URL.createObjectURL(await resposta.blob());
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = nome;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return nome;
+}
+
 export const api = {
   get: (caminho, opcoes) => requisitar(caminho, { ...opcoes, metodo: "GET" }),
   post: (caminho, corpo, opcoes) => requisitar(caminho, { ...opcoes, metodo: "POST", corpo }),
