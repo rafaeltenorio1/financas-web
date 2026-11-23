@@ -5,7 +5,8 @@ Contrato:
 - id_usuario vem sempre da sessão e não aparece na resposta.
 - Transação inexistente ou de outro usuário: 404 (nunca 403).
 - id_categoria precisa ser categoria padrão ou do próprio usuário; senão, 422.
-- Listagem: filtros data_inicio (inclusive) e data_fim (exclusive), tipo, id_categoria;
+- Listagem: filtros data_inicio (inclusive) e data_fim (exclusive), tipo, id_categoria e busca
+  (trecho no nome, na descrição ou no nome da categoria, sem diferenciar maiúsculas e acentos);
   limit (padrão 50, máximo 100) e offset; ordem por data_hora decrescente.
 - PATCH altera só os campos enviados; campos obrigatórios não aceitam null.
 """
@@ -367,3 +368,98 @@ async def test_filtro_por_categoria_nao_vaza_dados_de_outro(logado, csrf, outro_
         "/transacoes", params={"id_categoria": str(categoria.id_categoria)}
     )
     assert resposta.json() == []
+
+
+# --- Busca -----------------------------------------------------------------
+
+
+async def _buscar(client, busca, **params):
+    resposta = await client.get("/transacoes", params={"busca": busca, **params})
+    assert resposta.status_code == 200, resposta.text
+    return {t["nome"] for t in resposta.json()}
+
+
+async def test_busca_trecho_do_nome_sem_diferenciar_maiusculas_e_acentos(logado, csrf):
+    await _criar(logado, csrf, nome="Farmácia São João")
+    await _criar(logado, csrf, nome="Mercado")
+
+    assert await _buscar(logado, "FARMACIA") == {"Farmácia São João"}
+    assert await _buscar(logado, "sao jo") == {"Farmácia São João"}
+    assert await _buscar(logado, "acia s") == {"Farmácia São João"}
+
+
+async def test_busca_na_descricao(logado, csrf):
+    await _criar(logado, csrf, nome="Presente", descricao="Aniversário da Júlia")
+    await _criar(logado, csrf, nome="Outro")
+
+    assert await _buscar(logado, "julia") == {"Presente"}
+
+
+async def test_busca_pelo_nome_da_categoria(logado, csrf, db):
+    from models.categoria import Categoria
+
+    combustivel = await db.scalar(select(Categoria).where(Categoria.id_usuario.is_(None), Categoria.nome == "Combustível"))
+    await _criar(logado, csrf, nome="Posto da esquina", id_categoria=str(combustivel.id_categoria))
+    await _criar(logado, csrf, nome="Sem categoria")
+
+    assert await _buscar(logado, "combustivel") == {"Posto da esquina"}
+
+
+async def test_busca_pela_categoria_propria(logado, csrf):
+    categoria = await logado.post("/categorias", json={"nome": "Viagem à Bahia"}, headers={"X-CSRF-Token": csrf})
+    await _criar(logado, csrf, nome="Hotel", id_categoria=categoria.json()["id_categoria"])
+
+    assert await _buscar(logado, "bahia") == {"Hotel"}
+
+
+async def test_busca_ignora_campos_vazios(logado, csrf):
+    await _criar(logado, csrf)
+    await _criar(logado, csrf, nome="Padaria")
+
+    assert await _buscar(logado, "padaria") == {"Padaria"}
+
+
+@pytest.mark.parametrize("busca, esperado", [("50%", {"Desconto 50%"}), ("a_b", {"a_b"}), ("\\", {"barra \\ invertida"})])
+async def test_curingas_sao_texto(logado, csrf, busca, esperado):
+    for nome in ("Desconto 50%", "Desconto 500", "a_b", "axb", "barra \\ invertida", "barra"):
+        await _criar(logado, csrf, nome=nome)
+
+    assert await _buscar(logado, busca) == esperado
+
+
+async def test_busca_so_com_espacos_e_ignorada(logado, csrf):
+    await _criar(logado, csrf, nome="Um")
+    await _criar(logado, csrf, nome="Dois")
+
+    assert await _buscar(logado, "   ") == {"Um", "Dois"}
+
+
+async def test_busca_longa_demais_e_recusada(logado):
+    resposta = await logado.get("/transacoes", params={"busca": "x" * 101})
+    assert resposta.status_code == 422
+
+
+async def test_busca_com_outros_filtros(logado, csrf):
+    await _criar(logado, csrf, nome="Uber ida", tipo="despesa")
+    await _criar(logado, csrf, nome="Uber reembolso", tipo="receita")
+    await _criar(logado, csrf, nome="Uber outubro", data_hora="2026-10-05T12:00:00-03:00")
+
+    assert await _buscar(logado, "uber", tipo="despesa", data_inicio="2026-11-01T00:00:00-03:00") == {"Uber ida"}
+
+
+async def test_busca_nao_vaza_dados_de_outro(logado, csrf, outro_usuario):
+    await _criar(outro_usuario, await obter_csrf(outro_usuario), nome="Segredo da Bia")
+    categoria = await outro_usuario.post("/categorias", json={"nome": "Projeto Secreto"}, headers={"X-CSRF-Token": await obter_csrf(outro_usuario)})
+    await _criar(logado, csrf, nome="Minha")
+
+    assert await _buscar(logado, "segredo") == set()
+    assert await _buscar(logado, "projeto secreto") == set()
+    assert categoria.status_code == 201
+
+
+async def test_busca_com_aspas_e_sql_nao_quebra(logado, csrf):
+    await _criar(logado, csrf, nome="D'Ávila")
+
+    assert await _buscar(logado, "d'avila") == {"D'Ávila"}
+    assert await _buscar(logado, "'; DROP TABLE transacao; --") == set()
+    assert len((await logado.get("/transacoes")).json()) == 1

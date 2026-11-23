@@ -194,3 +194,13 @@ async def test_nao_confunde_com_busca_por_id(logado):
     resposta = await logado.get(URL)
     assert resposta.status_code == 200
     assert resposta.headers["content-type"].startswith("text/csv")
+
+
+async def test_exportacao_respeita_a_busca(logado):
+    await _transacao(logado, nome="Farmácia do bairro")
+    await _transacao(logado, nome="Mercado")
+
+    linhas = _linhas(await _exportar(logado, busca="farmacia"))
+
+    assert len(linhas) == 2
+    assert "Farmácia do bairro" in linhas[1]
