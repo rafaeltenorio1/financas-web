@@ -39,7 +39,7 @@ function titulo(mes) {
   return mesAno(new Date(Date.UTC(mes.ano, mes.mes - 1, 15, 12)).toISOString());
 }
 
-export async function montar(raiz, { parametros, navegar }) {
+export async function montar(raiz, { parametros }) {
   const usuario = usuarioAtual();
   const fuso = usuario.fuso;
   const hojeLocal = hoje(fuso);
@@ -86,7 +86,7 @@ export async function montar(raiz, { parametros, navegar }) {
   importar.setAttribute("aria-label", "Importar extrato do banco");
   importar.addEventListener("click", async () => {
     const { abrirImportacao } = await import("../importacao.js");
-    abrirImportacao({ aoConcluir: () => navegar("/importar") });
+    abrirImportacao({ aoImportar: () => carregar() });
   });
   const novaTransacao = el("button", { type: "button", class: "btn btn-primario tr-nova", "aria-haspopup": "dialog" }, icone("mais", "ic-sm"), "Nova transação");
   novaTransacao.addEventListener("click", () => abrirFormularioTransacao({ aoSalvar: () => carregar() }));
@@ -519,6 +519,10 @@ export async function montar(raiz, { parametros, navegar }) {
   if (transacaoExtra && !itens.some((t) => t.id_transacao === aberta) && !emColuna()) {
     const alvo = transacaoExtra;
     abrirFormularioTransacao({ transacao: alvo, aoSalvar: () => carregar() });
+  }
+  if (parametros.get("importar")) {
+    atualizarUrl();
+    importar.click();
   }
 
   return () => {

@@ -8,7 +8,6 @@ const ITENS_NAV = [
   { caminho: "/nova", rotulo: "Nova transação", icone: "mais", novo: true },
   { caminho: "/contas", rotulo: "Contas", icone: "contas" },
   { caminho: "/categorias", rotulo: "Categorias", icone: "categorias", soLateral: true },
-  { caminho: "/importar", rotulo: "Importar", icone: "enviar", soLateral: true },
   { caminho: "/conta", rotulo: "Conta", icone: "conta" },
 ];
 
