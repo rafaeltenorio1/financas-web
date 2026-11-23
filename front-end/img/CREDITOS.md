@@ -8,3 +8,7 @@
 As marcas sem ícone nas duas fontes aparecem como iniciais na cor da marca (monograma), sem usar arte de terceiros.
 
 Para gerar de novo `marcas.svg` e `js/marcas.js`: baixe `simple-icons@13.21.0` (npm) e `@iconify-json/arcticons@1.2.20` (`icons.json`) e rode `python3 -I ferramentas/gerar_marcas.py <pasta do simple-icons> <icons.json do arcticons> front-end`.
+
+# Bibliotecas copiadas
+
+- **qrcode-generator** 1.4.4, de Kazuhiko Arase (https://github.com/kazuhikoarase/qrcode-generator), licença MIT (o aviso está no cabeçalho do arquivo). Copiado sem alterações em `js/vendor/qrcode-generator-1.4.4.js` (SHA-256 `18ae399f81182bc9de916e9c77b195df20cc58d6f2d55a62b085a299f1bf1780`). O QR é desenhado por `js/qr.js` com o DOM, sem o `createSvgTag` da biblioteca.

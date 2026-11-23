@@ -14,7 +14,6 @@ const ITENS_NAV = [
 registrar("/entrar", { publica: true, soDeslogado: true, titulo: "Entrar", carregar: () => import("./telas/login.js") });
 registrar("/", { titulo: "Painel", carregar: () => import("./telas/painel.js") });
 
-const emBreve = () => import("./telas/em-breve.js");
 registrar("/cadastro", { publica: true, soDeslogado: true, titulo: "Criar conta", carregar: () => import("./telas/cadastro.js") });
 registrar("/esqueci-senha", { publica: true, soDeslogado: true, titulo: "Esqueci a senha", carregar: () => import("./telas/esqueci-senha.js") });
 registrar("/redefinir-senha", { publica: true, titulo: "Criar senha nova", carregar: () => import("./telas/redefinir-senha.js") });
@@ -25,7 +24,7 @@ registrar("/transacoes", { titulo: "Transações", carregar: () => import("./tel
 registrar("/contas", { titulo: "Contas", carregar: () => import("./telas/contas.js") });
 registrar("/categorias", { titulo: "Categorias", carregar: () => import("./telas/categorias.js") });
 registrar("/importar", { titulo: "Importar extrato", carregar: () => import("./telas/importar.js") });
-registrar("/conta", { titulo: "Em construção", carregar: emBreve });
+registrar("/conta", { titulo: "Conta", carregar: () => import("./telas/conta.js") });
 
 let mensagemPendente = null;
 

@@ -15,6 +15,7 @@ const PUBLICAS = new Set([
 const CREDENCIAL_ERRADA = new Set([
   "/auth/trocar-senha",
   "/auth/excluir-conta",
+  "/auth/trocar-email",
   "/auth/2fa/ativar",
   "/auth/2fa/desativar",
   "/auth/2fa/codigos-recuperacao",
