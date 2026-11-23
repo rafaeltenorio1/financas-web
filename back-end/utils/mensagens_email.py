@@ -149,6 +149,22 @@ def verificacao_email(nome: str, link: str) -> ConteudoEmail:
     )
 
 
+def tentativa_de_cadastro(nome: str) -> ConteudoEmail:
+    base = settings.FRONT_URL.rstrip("/")
+    return _montar(
+        "Tentativa de cadastro com seu e-mail",
+        nome,
+        [
+            "Alguém tentou criar uma conta no Finanças com este e-mail, que já está cadastrado. "
+            "Nenhuma conta nova foi criada e nada mudou na sua.",
+            f"Se foi você, é só entrar: {base}/#/entrar",
+            "Se você não lembra a senha, ou se não reconhece esta conta, redefina a senha pelo botão abaixo. "
+            "Isso também confirma que o e-mail é seu.",
+        ],
+        ("Redefinir senha", f"{base}/#/esqueci-senha"),
+    )
+
+
 def redefinir_senha(nome: str, link: str) -> ConteudoEmail:
     return _montar(
         "Redefinição de senha",

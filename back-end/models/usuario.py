@@ -28,6 +28,7 @@ class Usuario(Base):
     resumo_mensal: Mapped[bool] = mapped_column(default=True, server_default=true())
     resumo_enviado_mes: Mapped[date | None] = mapped_column(Date)
     preferencias_painel: Mapped[dict | None] = mapped_column(JSONB)
+    aviso_cadastro_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
         CheckConstraint(

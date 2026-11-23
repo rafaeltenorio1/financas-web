@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, Cookie
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import select, delete
+from sqlalchemy import delete, or_, select, update
 
 from datetime import datetime, timedelta, timezone
 
@@ -158,22 +158,49 @@ async def _apagar_outras_sessoes(db: AsyncSession, usuario: Usuario, token: str 
     )
 
 
-@router.post("/register", status_code=201, response_model=UsuarioOut)
+CADASTRO_RECEBIDO = MensagemOut(
+    mensagem="Enviamos um e-mail para você confirmar o cadastro. Confira sua caixa de entrada."
+)
+
+
+async def _avisar_tentativa_de_cadastro(db: AsyncSession, email: str) -> None:
+    agora = datetime.now(timezone.utc)
+    limite = agora - timedelta(minutes=settings.TOKEN_INTERVALO_ENVIO_MIN)
+    reservado = (
+        await db.execute(
+            update(Usuario)
+            .where(
+                Usuario.email == email,
+                or_(Usuario.aviso_cadastro_em.is_(None), Usuario.aviso_cadastro_em < limite),
+            )
+            .values(aviso_cadastro_em=agora)
+            .returning(Usuario.email, Usuario.nome)
+        )
+    ).first()
+    await db.commit()
+    if reservado is not None:
+        agendar_envio(reservado.email, mensagens_email.tentativa_de_cadastro(reservado.nome))
+
+
+@router.post("/register", status_code=202, response_model=MensagemOut)
 async def register(dados: UsuarioCreate, db: AsyncSession = Depends(get_db)):
-    novo = Usuario(
-        nome = dados.nome,
-        email = dados.email,
-        senha_hash=await gerar_hash(dados.senha),
-    )
+    senha_hash = await gerar_hash(dados.senha)
+    existente = await db.scalar(select(Usuario.id_usuario).where(Usuario.email == dados.email))
+    if existente is not None:
+        await _avisar_tentativa_de_cadastro(db, dados.email)
+        return CADASTRO_RECEBIDO
+
+    novo = Usuario(nome=dados.nome, email=dados.email, senha_hash=senha_hash)
     db.add(novo)
     try:
         await db.commit()
     except IntegrityError:
         await db.rollback()
-        raise HTTPException(status_code=409, detail="Não foi possível concluir o cadastro.")
+        await _avisar_tentativa_de_cadastro(db, dados.email)
+        return CADASTRO_RECEBIDO
     await db.refresh(novo)
     await _enviar_verificacao(db, novo)
-    return novo
+    return CADASTRO_RECEBIDO
 
 
 @router.post("/login", response_model=UsuarioOut | Requer2FAOut)
