@@ -73,3 +73,14 @@
 @media (min-width: 900px) {
   .auth-cartao { padding: var(--esp-10) var(--esp-8); }
 }
+
+.forca { display: grid; gap: 6px; }
+.forca-barras { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.forca-barras span { height: 4px; border-radius: var(--raio-pilula); background: var(--superficie-2); }
+.forca[data-nivel="1"] .forca-barras span:nth-child(-n + 1) { background: var(--despesa); }
+.forca[data-nivel="2"] .forca-barras span:nth-child(-n + 2) { background: var(--aviso); }
+.forca[data-nivel="3"] .forca-barras span:nth-child(-n + 3) { background: var(--receita); }
+.forca-texto { font-size: var(--texto-xs); color: var(--texto-suave); }
+.auth-acoes { display: grid; gap: var(--esp-3); margin-top: var(--esp-6); }
+.auth-carregando { display: flex; align-items: center; gap: var(--esp-3); margin-top: var(--esp-5); color: var(--texto-suave); }
+.auth-destaque { color: var(--texto); font-weight: 700; overflow-wrap: anywhere; }

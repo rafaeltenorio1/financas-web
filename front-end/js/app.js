@@ -14,7 +14,11 @@ registrar("/entrar", { publica: true, soDeslogado: true, titulo: "Entrar", carre
 registrar("/", { titulo: "Painel", carregar: () => import("./telas/painel.js") });
 
 const emBreve = () => import("./telas/em-breve.js");
-for (const caminho of ["/cadastro", "/esqueci-senha"]) registrar(caminho, { publica: true, titulo: "Em construção", carregar: emBreve });
+registrar("/cadastro", { publica: true, soDeslogado: true, titulo: "Criar conta", carregar: () => import("./telas/cadastro.js") });
+registrar("/esqueci-senha", { publica: true, soDeslogado: true, titulo: "Esqueci a senha", carregar: () => import("./telas/esqueci-senha.js") });
+registrar("/redefinir-senha", { publica: true, titulo: "Criar senha nova", carregar: () => import("./telas/redefinir-senha.js") });
+registrar("/verificar-email", { publica: true, titulo: "Confirmar e-mail", carregar: () => import("./telas/verificar-email.js") });
+registrar("/confirmar-email", { publica: true, titulo: "Confirmar e-mail novo", carregar: () => import("./telas/confirmar-email.js") });
 for (const caminho of ["/transacoes", "/nova", "/contas", "/conta"]) registrar(caminho, { titulo: "Em construção", carregar: emBreve });
 
 let mensagemPendente = null;
