@@ -1,9 +1,10 @@
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import AwareDatetime
-from sqlalchemy import Date, cast, func, or_, select
+from sqlalchemy import Date, case, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
@@ -13,7 +14,7 @@ from models.enums import TipoTransacao
 from models.transacao import Transacao
 from models.usuario import Usuario
 from schemas.resumo import ResumoOut
-from schemas.transacao import TransacaoCreate, TransacaoOut, TransacaoUpdate
+from schemas.transacao import TotaisOut, TransacaoCreate, TransacaoOut, TransacaoUpdate
 from utils.auth import get_usuario_atual
 from utils.categorias import validar_categoria
 from utils.csrf import verificar_csrf, verificar_origem
@@ -29,6 +30,7 @@ router = APIRouter(
 
 NAO_ENCONTRADA = HTTPException(status_code=404, detail="Transação não encontrada.")
 BUSCA_MAXIMA = 100
+ZERO = Decimal("0.00")
 
 
 async def _buscar_transacao(
@@ -130,6 +132,46 @@ async def resumo_transacoes(
 ):
     await validar_fuso(db, fuso)
     return await calcular_resumo(db, usuario.id_usuario, data_inicio, data_fim, fuso)
+
+
+@router.get("/totais", response_model=TotaisOut)
+async def totais_transacoes(
+    data_inicio: AwareDatetime | None = Query(default=None),
+    data_fim: AwareDatetime | None = Query(default=None),
+    tipo: TipoTransacao | None = Query(default=None),
+    id_categoria: uuid.UUID | None = Query(default=None),
+    busca: str | None = Query(default=None, max_length=BUSCA_MAXIMA),
+    fuso: str = Query(default="America/Sao_Paulo", max_length=64),
+    usuario: Usuario = Depends(get_usuario_atual),
+    db: AsyncSession = Depends(get_db),
+):
+    await validar_fuso(db, fuso)
+    filtros = _filtros(usuario, data_inicio, data_fim, tipo, id_categoria, busca)
+    dia = cast(func.timezone(fuso, Transacao.data_hora), Date).label("dia")
+
+    def soma(tipo_somado: TipoTransacao):
+        return func.coalesce(func.sum(case((Transacao.tipo == tipo_somado, Transacao.valor))), ZERO)
+
+    linhas = (
+        await db.execute(
+            select(
+                dia,
+                soma(TipoTransacao.RECEITA).label("receitas"),
+                soma(TipoTransacao.DESPESA).label("despesas"),
+                func.count().label("quantidade"),
+            )
+            .where(*filtros)
+            .group_by(dia)
+            .order_by(dia.desc())
+        )
+    ).all()
+
+    return TotaisOut(
+        receitas=sum((linha.receitas for linha in linhas), ZERO),
+        despesas=sum((linha.despesas for linha in linhas), ZERO),
+        quantidade=sum(linha.quantidade for linha in linhas),
+        por_dia=[{"dia": linha.dia, "receitas": linha.receitas, "despesas": linha.despesas} for linha in linhas],
+    )
 
 
 @router.get("/exportar")

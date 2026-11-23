@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, ConfigDict, AwareDatetime
 import uuid
+from datetime import date
 from decimal import Decimal
 from models.enums import TipoTransacao, TipoPagamento
 
@@ -37,3 +38,16 @@ class TransacaoUpdate(BaseModel):
     tipo: TipoTransacao = Field(default=None)
     forma_pagamento: TipoPagamento | None = None
     descricao: str | None = Field(default=None, max_length=1000)
+
+
+class TotalDoDia(BaseModel):
+    dia: date
+    receitas: Decimal
+    despesas: Decimal
+
+
+class TotaisOut(BaseModel):
+    receitas: Decimal
+    despesas: Decimal
+    quantidade: int
+    por_dia: list[TotalDoDia]
