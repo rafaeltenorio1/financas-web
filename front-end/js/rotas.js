@@ -94,6 +94,11 @@ export function iniciarRotas(raiz, layout) {
   renderizar();
 }
 
+export function recarregar() {
+  hashAtual = null;
+  renderizar();
+}
+
 export function caminhoAtual() {
   return rotaAtual().caminho;
 }

@@ -73,3 +73,24 @@ export function diasEntre(deIso, ateIso) {
   const [a, b] = [deIso, ateIso].map((d) => Date.UTC(...d.split("-").map((n, i) => Number(n) - (i === 1 ? 1 : 0))));
   return Math.round((b - a) / 86400000);
 }
+
+export function instanteLocal({ ano, mes, dia, hora = 12, minuto = 0 }, fuso) {
+  const local = Date.UTC(ano, mes - 1, dia, hora, minuto);
+  const primeira = local - deslocamento(local, fuso);
+  return new Date(local - deslocamento(primeira, fuso));
+}
+
+export function somarDias({ ano, mes, dia }, quantidade) {
+  const data = new Date(Date.UTC(ano, mes - 1, dia + quantidade));
+  return { ano: data.getUTCFullYear(), mes: data.getUTCMonth() + 1, dia: data.getUTCDate() };
+}
+
+export function lerChaveDoDia(texto) {
+  const achado = /^(\d{4})-(\d{2})-(\d{2})$/.exec(texto || "");
+  return achado ? { ano: Number(achado[1]), mes: Number(achado[2]), dia: Number(achado[3]) } : null;
+}
+
+export function diaNoFuso(iso, fuso) {
+  const p = partes(new Date(iso).getTime(), fuso);
+  return { ano: p.ano, mes: p.mes, dia: p.dia, hora: p.hora, minuto: p.minuto };
+}
