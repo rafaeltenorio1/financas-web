@@ -5,12 +5,20 @@ let desmontarAtual = null;
 let montarLayout = null;
 let raizApp = null;
 let versao = 0;
+let guardaDeSaida = null;
+let hashAtual = null;
+let ignorarProxima = false;
+
+export function definirGuardaDeSaida(funcao) {
+  guardaDeSaida = funcao;
+}
 
 export function registrar(caminho, definicao) {
   rotas.set(caminho, { publica: false, soDeslogado: false, ...definicao });
 }
 
-export function navegar(caminho, { substituir = false } = {}) {
+export function navegar(caminho, { substituir = false, forcar = false } = {}) {
+  if (forcar) guardaDeSaida = null;
   const destino = `#${caminho}`;
   if (location.hash === destino) {
     renderizar();
@@ -31,6 +39,17 @@ function rotaAtual() {
 }
 
 async function renderizar() {
+  if (ignorarProxima) {
+    ignorarProxima = false;
+    return;
+  }
+  if (guardaDeSaida && hashAtual !== null && location.hash !== hashAtual && !guardaDeSaida()) {
+    ignorarProxima = true;
+    location.hash = hashAtual;
+    return;
+  }
+  guardaDeSaida = null;
+  hashAtual = location.hash;
   const minhaVersao = ++versao;
   const { caminho, parametros } = rotaAtual();
   const rota = rotas.get(caminho);

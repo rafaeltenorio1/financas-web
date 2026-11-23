@@ -38,6 +38,9 @@ function navegacao(caminho) {
       ),
     );
   }
+  const sair = el("button", { type: "button", class: "nav-item nav-sair" }, icone("sair"), el("span", { texto: "Sair" }));
+  sair.addEventListener("click", sairDaConta);
+  nav.append(sair);
   return nav;
 }
 
@@ -64,7 +67,7 @@ window.addEventListener("sessao-expirada", () => {
   if (!estavaLogado || caminhoAtual() === "/entrar") return;
   mensagemPendente = { tipo: "aviso", texto: "Sua sessão expirou. Entre novamente para continuar." };
   const volta = encodeURIComponent(caminhoAtual());
-  navegar(`/entrar?volta=${volta}`, { substituir: true });
+  navegar(`/entrar?volta=${volta}`, { substituir: true, forcar: true });
 });
 
 export async function sairDaConta() {

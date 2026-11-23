@@ -1,5 +1,6 @@
 import { el, icone, mensagem, ocupado } from "../dom.js";
 import { usuarioAtual } from "../sessao.js";
+import { definirGuardaDeSaida } from "../rotas.js";
 import { chaveDoMes, compararMeses, hoje, lerChaveDoMes, somarMeses } from "../datas.js";
 import { mesAno } from "../formatos.js";
 import { avisoDeContas, contextoDoMes } from "../painel/calculos.js";
@@ -259,6 +260,7 @@ export async function montar(raiz, { parametros }) {
     if (edicao.alterou()) evento.preventDefault();
   }
   addEventListener("beforeunload", aoSairDaPagina);
+  definirGuardaDeSaida(() => !edicao.alterou() || confirm("Você tem mudanças no painel que ainda não foram salvas. Sair sem salvar?"));
 
   let carregouInicio = false;
   aplicarLayout(preferencias.cartoes);
