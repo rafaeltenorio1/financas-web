@@ -1,4 +1,5 @@
 import { api, ErroApi } from "./api.js";
+import { confirmar } from "./confirmar.js";
 import { el, icone, mensagem, ocupado } from "./dom.js";
 import { usuarioAtual } from "./sessao.js";
 import { criarSeletorDeCategorias, esquecerUsoDasCategorias } from "./seletor-categorias.js";
@@ -76,14 +77,13 @@ export async function abrirFormularioTransacao({ transacao = null, aoSalvar, aoF
     botao.addEventListener("click", () => mudarTipo(tipo));
     return botao;
   });
-  const ajudaValor = el("p", { class: "campo-ajuda", id: "ft-valor-ajuda", texto: "Digite só os números: 4590 vira R$ 45,90." });
   const erroValor = el("p", { class: "campo-erro", id: "ft-valor-erro" });
   const valor = el("input", {
     id: "ft-valor",
     name: "valor",
     inputmode: "numeric",
     autocomplete: "off",
-    "aria-describedby": "ft-valor-ajuda ft-valor-erro",
+    "aria-describedby": "ft-valor-erro",
     value: formatarCentavos(estado.centavos),
   });
   const nome = el("input", { class: "entrada", id: "ft-nome", name: "nome", maxlength: 255, autocomplete: "off", placeholder: "Ex.: Mercado do mês" });
@@ -118,7 +118,6 @@ export async function abrirFormularioTransacao({ transacao = null, aoSalvar, aoF
         el("div", { class: "ft-tipo", role: "group", "aria-label": "Tipo" }, ...botoesTipo),
         el("label", { for: "ft-valor", texto: "Valor" }),
         valor,
-        ajudaValor,
         erroValor,
       ),
       el("div", { class: "ft-secao campo" }, el("label", { class: "ft-rotulo", for: "ft-nome", texto: "Descrição" }), nome),
@@ -241,8 +240,15 @@ export async function abrirFormularioTransacao({ transacao = null, aoSalvar, aoF
   const snapshot = inicial();
   const alterado = () => inicial() !== snapshot;
 
-  function podeFechar() {
-    return !alterado() || confirm(editando ? "Descartar as alterações desta transação?" : "Descartar esta transação sem salvar?");
+  async function pedirFechamento() {
+    if (!alterado()) return true;
+    return confirmar({
+      titulo: editando ? "Descartar as alterações?" : "Descartar esta transação?",
+      texto: editando ? "O que você mudou nesta transação vai se perder." : "O que você preencheu ainda não foi salvo.",
+      confirmar: "Descartar",
+      cancelar: "Continuar editando",
+      perigo: true,
+    });
   }
 
   valor.addEventListener("input", () => {
@@ -257,12 +263,14 @@ export async function abrirFormularioTransacao({ transacao = null, aoSalvar, aoF
     marcarErroData("");
     agendarImpacto();
   });
-  fechar.addEventListener("click", () => {
-    if (podeFechar()) dialogo.close();
+  fechar.addEventListener("click", async () => {
+    if (await pedirFechamento()) dialogo.close();
   });
-  dialogo.addEventListener("cancel", (evento) => {
-    if (!podeFechar()) evento.preventDefault();
+  dialogo.addEventListener("cancel", async (evento) => {
+    evento.preventDefault();
+    if (await pedirFechamento()) dialogo.close();
   });
+  dialogo.pedirFechamento = pedirFechamento;
   dialogo.addEventListener("close", () => {
     clearTimeout(temporizadorImpacto);
     dialogo.remove();

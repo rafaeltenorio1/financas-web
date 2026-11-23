@@ -40,7 +40,7 @@ function navegacao(caminho) {
     const atual = item.caminho === caminho;
     const link = el(
       "a",
-      { class: `nav-item${item.novo ? " nav-novo" : ""}${item.soLateral ? " nav-lateral" : ""}`, href: `#${item.caminho}`, "aria-current": atual ? "page" : null },
+      { class: `nav-item${item.novo ? " nav-novo" : ""}${item.novo && caminho === "/transacoes" ? " nav-novo-na-tela" : ""}${item.soLateral ? " nav-lateral" : ""}`, href: `#${item.caminho}`, "aria-current": atual ? "page" : null },
       icone(item.icone),
       el("span", { texto: item.rotulo }),
     );

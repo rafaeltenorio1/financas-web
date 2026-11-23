@@ -2,7 +2,8 @@
 .tr-acoes { display: flex; align-items: center; gap: var(--esp-2); margin-left: auto; }
 .tr-acoes .btn { min-height: 40px; padding: 0 12px; font-size: var(--texto-sm); }
 .tr-acoes .btn .ic-sm { width: 17px; height: 17px; }
-.tr-modo { display: none; }
+.tr-modo-bloco { display: none; }
+.tr-nova { display: none; }
 
 .tr-filtros { display: grid; gap: 10px; margin: 14px 0 16px; }
 .tr-busca { position: relative; }
@@ -83,11 +84,13 @@
 .tr-coluna-detalhe { display: none; }
 
 @media (min-width: 900px) {
-  .tr-modo { display: inline-flex; padding: 3px; border-radius: 12px; background: var(--superficie); border: 1px solid var(--borda); }
-  .tr-modo button { width: 36px; height: 32px; display: grid; place-items: center; border-radius: 9px; color: var(--texto-suave); }
+  .tr-nova { display: inline-flex; }
+  .tr-modo-bloco { display: block; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--borda); }
+  .tr-modo-bloco p { margin-bottom: 8px; font-size: 0.8rem; font-weight: 700; color: var(--texto-suave); }
+  .tr-modo { display: grid; grid-template-columns: 1fr 1fr; padding: 3px; border-radius: 12px; background: var(--fundo); border: 1px solid var(--borda); }
+  .tr-modo button { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; border-radius: 9px; font-size: 0.82rem; font-weight: 600; color: var(--texto-suave); }
   .tr-modo button:hover { color: var(--texto); }
   .tr-modo button[aria-pressed="true"] { background: var(--borda-forte); color: var(--texto); }
-  .tr-modo .ic { width: 17px; height: 17px; }
   .tr-grade { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 24px; align-items: start; margin-top: 18px; }
   .tr-grade.com-coluna { grid-template-columns: 270px minmax(0, 1fr) 360px; }
   .tr-filtros { position: sticky; top: 20px; margin: 0; padding: 18px; border-radius: 20px; background: var(--superficie); gap: 12px; }

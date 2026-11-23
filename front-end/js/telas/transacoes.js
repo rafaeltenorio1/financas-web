@@ -5,8 +5,10 @@ import { carregarCategorias, categoria, corDaCategoria } from "../categorias.js"
 import { chaveDoDia, chaveDoMes, compararMeses, diaNoFuso, hoje, inicioDoMes, lerChaveDoMes, somarMeses } from "../datas.js";
 import { dataLonga, hora, mesAno, moeda, moedaComSinal } from "../formatos.js";
 import { iconeDaTransacao, nomeDaTransacao } from "../painel/componentes.js";
+import { carregarIconesDasContas } from "../contas-icones.js";
 import { abrirFormularioTransacao, esquecerCachesDoFormulario } from "../transacao-form.js";
 import { avisar } from "../avisos.js";
+import { confirmar } from "../confirmar.js";
 
 const POR_PAGINA = 50;
 const CHAVE_MODO = "transacoes-detalhe";
@@ -69,7 +71,7 @@ export async function montar(raiz, { parametros }) {
     ["lado", "layout-colunas", "Detalhe ao lado da lista"],
     ["embaixo", "layout-lista", "Detalhe embaixo da transação"],
   ].map(([valor, simbolo, rotulo]) => {
-    const botao = el("button", { type: "button", title: rotulo, "aria-pressed": String(modo === valor) }, icone(simbolo), el("span", { class: "sr", texto: rotulo }));
+    const botao = el("button", { type: "button", title: rotulo, "aria-pressed": String(modo === valor) }, icone(simbolo, "ic-sm"), el("span", { texto: valor === "lado" ? "Ao lado" : "Embaixo" }));
     botao.addEventListener("click", () => {
       modo = valor;
       guardarModo(valor);
@@ -82,8 +84,8 @@ export async function montar(raiz, { parametros }) {
   exportar.setAttribute("aria-label", "Exportar transações filtradas em CSV");
   const importar = el("a", { class: "btn btn-secundario", href: "#/importar", title: "Importar extrato do banco" }, icone("enviar", "ic-sm"), el("span", { class: "rotulo-curto", texto: "Importar" }));
   importar.setAttribute("aria-label", "Importar extrato do banco");
-  const categoriasLink = el("a", { class: "btn btn-secundario", href: "#/categorias", title: "Gerenciar categorias" }, icone("categorias", "ic-sm"), el("span", { class: "rotulo-curto", texto: "Categorias" }));
-  categoriasLink.setAttribute("aria-label", "Gerenciar categorias");
+  const novaTransacao = el("button", { type: "button", class: "btn btn-primario tr-nova", "aria-haspopup": "dialog" }, icone("mais", "ic-sm"), "Nova transação");
+  novaTransacao.addEventListener("click", () => abrirFormularioTransacao({ aoSalvar: () => carregar() }));
 
   const busca = el("input", { type: "search", class: "entrada", id: "tr-busca", name: "busca", autocomplete: "off", spellcheck: "false", maxlength: 100, placeholder: "Buscar", "aria-describedby": "tr-ajuda" });
   busca.value = filtros.busca;
@@ -124,6 +126,7 @@ export async function montar(raiz, { parametros }) {
     selectCategoria,
     listaCategorias,
     limpar,
+    el("div", { class: "tr-modo-bloco" }, el("p", { id: "tr-titulo-modo", texto: "Abrir detalhe" }), el("div", { class: "tr-modo", role: "group", "aria-labelledby": "tr-titulo-modo" }, ...botoesModo)),
   );
   const resumoEl = el("dl", { class: "tr-resumo" });
   const lista = el("div", { class: "tr-lista" });
@@ -136,7 +139,7 @@ export async function montar(raiz, { parametros }) {
       "header",
       { class: "tr-cab" },
       el("div", { class: "painel-mes" }, voltarMes, tituloMes, avancarMes),
-      el("div", { class: "tr-acoes" }, el("div", { class: "tr-modo", role: "group", "aria-label": "Onde mostrar o detalhe" }, ...botoesModo), exportar, importar, categoriasLink),
+      el("div", { class: "tr-acoes" }, exportar, importar, novaTransacao),
     ),
     anuncio,
     grade,
@@ -258,7 +261,8 @@ export async function montar(raiz, { parametros }) {
     const apagar = el("button", { type: "button", class: "btn btn-secundario tr-apagar", texto: "Apagar" });
     apagar.addEventListener("click", async () => {
       const descricao = `${nomeDaTransacao(transacao)}, ${moeda(transacao.valor)}`;
-      if (!confirm(`Apagar “${descricao}”? Não dá para desfazer.`)) return;
+      const sim = await confirmar({ titulo: "Apagar esta transação?", texto: `${descricao}. Não dá para desfazer.`, confirmar: "Apagar transação", perigo: true });
+      if (!sim) return;
       ocupado(apagar, true, "Apagando…");
       try {
         await api.delete(`/transacoes/${transacao.id_transacao}`);
@@ -402,6 +406,7 @@ export async function montar(raiz, { parametros }) {
         api.get(`/transacoes/resumo?${new URLSearchParams({ data_inicio: inicio, data_fim: fim, fuso })}`, { sinal }),
         api.get(`/transacoes/totais?${consultaDaLista({ fuso })}`, { sinal }),
         carregarCategorias(),
+        carregarIconesDasContas().catch(() => null),
       ]);
       itens = pagina;
       resumo = resumoMes;

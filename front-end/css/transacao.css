@@ -87,6 +87,7 @@
 }
 .ft-cat-ic .ic { width: 18px; height: 18px; }
 .ft-cats-nota { margin-top: var(--esp-2); font-size: var(--texto-xs); color: var(--texto-suave); }
+.ft-cats-nota:empty { margin: 0; }
 .ft-cats-nota button { color: var(--texto); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 .ft-cats-gerenciar { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; margin-top: 4px; font-size: var(--texto-xs); font-weight: 700; color: var(--texto-suave); text-underline-offset: 3px; }
 .ft-cats-gerenciar:hover { color: var(--texto); }

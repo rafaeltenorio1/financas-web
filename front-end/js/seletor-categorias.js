@@ -47,11 +47,11 @@ export function criarSeletorDeCategorias({ prefixo, tipo, selecionada = null, ro
   const grade = el("div", { class: "ft-cats", role: "group", "aria-labelledby": rotuladoPor });
   const nota = el("p", { class: "ft-cats-nota", "aria-live": "polite" });
   const gerenciar = el("a", { class: "ft-cats-gerenciar", href: "#/categorias" }, icone("categorias", "ic-sm"), "Criar ou editar categorias");
-  gerenciar.addEventListener("click", (evento) => {
+  gerenciar.addEventListener("click", async (evento) => {
     const dialogo = gerenciar.closest("dialog");
     if (!dialogo) return;
     evento.preventDefault();
-    if (!dialogo.dispatchEvent(new Event("cancel", { cancelable: true }))) return;
+    if (dialogo.pedirFechamento && !(await dialogo.pedirFechamento())) return;
     dialogo.close();
     location.hash = "#/categorias";
   });
@@ -88,17 +88,17 @@ export function criarSeletorDeCategorias({ prefixo, tipo, selecionada = null, ro
         : `Nenhuma categoria com “${estado.busca.trim()}”.`;
     } else if (estado.todas) {
       mostradas = lista;
-      nota.textContent = `Todas as ${lista.length} categorias. Toque de novo na escolhida para tirar.`;
+      nota.textContent = "";
     } else {
       const resultado = semBusca(lista);
       mostradas = resultado.mostradas;
-      const verTodas = el("button", { type: "button", texto: `ver todas as ${lista.length}` });
+      const verTodas = el("button", { type: "button", texto: `Ver todas as ${lista.length}` });
       verTodas.addEventListener("click", () => {
         estado.todas = true;
         desenhar();
         grade.querySelector("button")?.focus();
       });
-      nota.append(resultado.usouHistorico ? "Suas mais usadas. Busque ou " : "Algumas sugestões. Busque ou ", verTodas, ".");
+      nota.append(verTodas);
     }
     grade.replaceChildren();
     for (const cat of mostradas) {
