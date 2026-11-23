@@ -1,7 +1,7 @@
 import { api, ErroApi } from "./api.js";
 import { el, icone, mensagem, ocupado } from "./dom.js";
 import { usuarioAtual } from "./sessao.js";
-import { carregarCategorias, corDaCategoria, simboloDaCategoria } from "./categorias.js";
+import { criarSeletorDeCategorias, esquecerUsoDasCategorias } from "./seletor-categorias.js";
 import { chaveDoDia, chaveDoMes, diaNoFuso, hoje, inicioDoMes, instanteLocal, lerChaveDoDia, somarDias, somarMeses } from "./datas.js";
 import { moeda } from "./formatos.js";
 import { avisar } from "./avisos.js";
@@ -13,33 +13,13 @@ const FORMAS = [
   ["boleto", "Boleto"],
   ["dinheiro", "Dinheiro"],
 ];
-const SUGESTOES = {
-  despesa: ["Supermercado/Feira", "Restaurantes e Lanchonetes", "Delivery", "Combustível", "Aplicativos de Corridas", "Farmácia e Medicamentos", "Energia Elétrica", "Aluguel"],
-  receita: ["Salário", "Freelance e Trabalhos Extras", "Rendimentos de Investimentos", "Vendas", "Reembolsos", "Presentes Recebidos", "Outras Receitas"],
-};
-const VISIVEIS = 8;
 const nomeDoMes = new Intl.DateTimeFormat("pt-BR", { month: "long", timeZone: "UTC" });
-const normalizar = (texto) => texto.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 
-let usoCache = null;
 const resumoCache = new Map();
 
 export function esquecerCachesDoFormulario() {
-  usoCache = null;
+  esquecerUsoDasCategorias();
   resumoCache.clear();
-}
-
-async function usoDasCategorias(fuso) {
-  if (usoCache) return usoCache;
-  const atual = hoje(fuso);
-  const parametros = new URLSearchParams({
-    data_inicio: inicioDoMes(somarMeses(atual, -2), fuso).toISOString(),
-    data_fim: inicioDoMes(somarMeses(atual, 1), fuso).toISOString(),
-    fuso,
-  });
-  const resumo = await api.get(`/transacoes/resumo?${parametros}`);
-  usoCache = new Map(resumo.por_categoria.filter((c) => c.id_categoria).map((c) => [`${c.tipo}:${c.id_categoria}`, c.quantidade]));
-  return usoCache;
 }
 
 async function resumoDoMes(mes, fuso) {
@@ -76,10 +56,7 @@ export async function abrirFormularioTransacao({ transacao = null, aoSalvar, aoF
     centavos: editando ? String(Math.round(Number(transacao.valor) * 100)) : "",
     quando: "hoje",
     outraData: "",
-    categoria: transacao?.id_categoria ?? null,
     forma: transacao?.forma_pagamento ?? null,
-    busca: "",
-    todas: false,
   };
   if (diaOriginal) {
     const chave = chaveDoDia(diaOriginal);
@@ -87,8 +64,7 @@ export async function abrirFormularioTransacao({ transacao = null, aoSalvar, aoF
     estado.outraData = chave;
   }
 
-  let categorias = [];
-  let uso = new Map();
+  const seletor = criarSeletorDeCategorias({ prefixo: "ft", tipo: estado.tipo, selecionada: transacao?.id_categoria ?? null, rotuladoPor: "ft-titulo-categoria" });
   const titulo = editando ? "Editar transação" : "Nova transação";
 
   const fechar = el("button", { type: "button", class: "btn btn-icone", "aria-label": "Fechar" }, icone("fechar"));
@@ -119,9 +95,6 @@ export async function abrirFormularioTransacao({ transacao = null, aoSalvar, aoF
   const erroData = el("p", { class: "campo-erro", id: "ft-data-erro" });
   dataOutra.setAttribute("aria-describedby", "ft-data-erro");
 
-  const busca = el("input", { type: "search", class: "entrada", id: "ft-busca", name: "busca", autocomplete: "off", placeholder: "Buscar categoria", "aria-label": "Buscar categoria", spellcheck: "false" });
-  const grade = el("div", { class: "ft-cats", role: "group", "aria-labelledby": "ft-titulo-categoria" });
-  const notaCategorias = el("p", { class: "ft-cats-nota", "aria-live": "polite" });
   const chipsForma = el("div", { class: "ft-chips", role: "group", "aria-labelledby": "ft-titulo-forma" });
   const descricao = el("textarea", { class: "entrada", id: "ft-descricao", name: "descricao", maxlength: 1000, "aria-label": "Observação" });
   descricao.value = transacao?.descricao ?? "";
@@ -154,9 +127,7 @@ export async function abrirFormularioTransacao({ transacao = null, aoSalvar, aoF
         "div",
         { class: "ft-secao" },
         el("h3", { id: "ft-titulo-categoria", texto: "Categoria" }),
-        el("div", { class: "ft-busca" }, icone("busca", "ic-sm"), busca),
-        grade,
-        notaCategorias,
+        seletor.bloco,
       ),
       el("div", { class: "ft-secao" }, el("h3", { id: "ft-titulo-forma", texto: "Como pagou" }), chipsForma),
       el("div", { class: "ft-secao" }, observacao),
@@ -194,73 +165,12 @@ export async function abrirFormularioTransacao({ transacao = null, aoSalvar, aoF
     }
   }
 
-  function categoriasDoTipo() {
-    return categorias.filter((c) => !c.tipo_padrao || c.tipo_padrao === estado.tipo);
-  }
-
-  function visiveisSemBusca(lista) {
-    const usadas = lista
-      .filter((c) => uso.has(`${estado.tipo}:${c.id_categoria}`))
-      .sort((a, b) => uso.get(`${estado.tipo}:${b.id_categoria}`) - uso.get(`${estado.tipo}:${a.id_categoria}`));
-    const escolhidas = [...usadas];
-    for (const nomeSugerido of SUGESTOES[estado.tipo]) {
-      const achada = lista.find((c) => c.nome === nomeSugerido);
-      if (achada && !escolhidas.includes(achada)) escolhidas.push(achada);
-    }
-    for (const c of lista) if (escolhidas.length < VISIVEIS && !escolhidas.includes(c)) escolhidas.push(c);
-    const topo = escolhidas.slice(0, VISIVEIS);
-    const selecionada = lista.find((c) => c.id_categoria === estado.categoria);
-    if (selecionada && !topo.includes(selecionada)) topo.unshift(selecionada);
-    return { mostradas: topo, usouHistorico: usadas.length > 0 };
-  }
-
-  function desenharCategorias() {
-    const lista = categoriasDoTipo().sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
-    const termo = normalizar(estado.busca);
-    let mostradas;
-    notaCategorias.replaceChildren();
-    if (termo) {
-      mostradas = lista.filter((c) => normalizar(c.nome).includes(termo));
-      notaCategorias.textContent = mostradas.length ? `${mostradas.length} ${mostradas.length === 1 ? "categoria encontrada" : "categorias encontradas"}.` : `Nenhuma categoria com “${estado.busca.trim()}”.`;
-    } else if (estado.todas) {
-      mostradas = lista;
-      notaCategorias.textContent = `Todas as ${lista.length} categorias. Toque de novo na escolhida para tirar.`;
-    } else {
-      const resultado = visiveisSemBusca(lista);
-      mostradas = resultado.mostradas;
-      const verTodas = el("button", { type: "button", texto: `ver todas as ${lista.length}` });
-      verTodas.addEventListener("click", () => {
-        estado.todas = true;
-        desenharCategorias();
-        grade.querySelector("button")?.focus();
-      });
-      notaCategorias.append(resultado.usouHistorico ? "Suas mais usadas. Busque ou " : "Algumas sugestões. Busque ou ", verTodas, ".");
-    }
-    grade.replaceChildren();
-    for (const cat of mostradas) {
-      const botao = el(
-        "button",
-        { type: "button", class: "ft-cat", "aria-pressed": String(cat.id_categoria === estado.categoria), title: cat.nome },
-        el("span", { class: "ft-cat-ic", "aria-hidden": "true" }, icone(simboloDaCategoria(cat))),
-        el("span", { texto: cat.nome }),
-      );
-      botao.style.setProperty("--cor", corDaCategoria(cat));
-      botao.addEventListener("click", () => {
-        estado.categoria = estado.categoria === cat.id_categoria ? null : cat.id_categoria;
-        grade.querySelectorAll(".ft-cat").forEach((b) => b.setAttribute("aria-pressed", String(b === botao && estado.categoria !== null)));
-      });
-      grade.append(botao);
-    }
-  }
-
   function mudarTipo(tipo) {
     estado.tipo = tipo;
     dialogo.dataset.tipo = tipo;
     botoesTipo.forEach((b) => b.setAttribute("aria-pressed", String(b.classList.contains(tipo))));
     salvar.textContent = editando ? "Salvar alterações" : tipo === "despesa" ? "Salvar gasto" : "Salvar ganho";
-    const atual = categorias.find((c) => c.id_categoria === estado.categoria);
-    if (atual?.tipo_padrao && atual.tipo_padrao !== tipo) estado.categoria = null;
-    desenharCategorias();
+    seletor.definirTipo(tipo);
     agendarImpacto();
   }
 
@@ -327,7 +237,7 @@ export async function abrirFormularioTransacao({ transacao = null, aoSalvar, aoF
     else dataOutra.removeAttribute("aria-invalid");
   }
 
-  const inicial = () => JSON.stringify([estado.tipo, estado.centavos, estado.quando, dataOutra.value, estado.categoria, estado.forma, nome.value, descricao.value]);
+  const inicial = () => JSON.stringify([estado.tipo, estado.centavos, estado.quando, dataOutra.value, seletor.valor(), estado.forma, nome.value, descricao.value]);
   const snapshot = inicial();
   const alterado = () => inicial() !== snapshot;
 
@@ -346,16 +256,6 @@ export async function abrirFormularioTransacao({ transacao = null, aoSalvar, aoF
   dataOutra.addEventListener("input", () => {
     marcarErroData("");
     agendarImpacto();
-  });
-  busca.addEventListener("input", () => {
-    estado.busca = busca.value;
-    desenharCategorias();
-  });
-  busca.addEventListener("keydown", (evento) => {
-    if (evento.key === "Enter") {
-      evento.preventDefault();
-      grade.querySelector(".ft-cat")?.click();
-    }
   });
   fechar.addEventListener("click", () => {
     if (podeFechar()) dialogo.close();
@@ -385,7 +285,7 @@ export async function abrirFormularioTransacao({ transacao = null, aoSalvar, aoF
       valor: (centavos / 100).toFixed(2),
       data_hora: dataHora,
       nome: nome.value.trim() || null,
-      id_categoria: estado.categoria,
+      id_categoria: seletor.valor(),
       forma_pagamento: estado.forma,
       descricao: descricao.value.trim() || null,
     };
@@ -438,14 +338,7 @@ export async function abrirFormularioTransacao({ transacao = null, aoSalvar, aoF
   dialogo.showModal();
   if (matchMedia("(min-width: 900px)").matches) valor.focus();
 
-  try {
-    const [mapa, usoCarregado] = await Promise.all([carregarCategorias(), usoDasCategorias(fuso).catch(() => new Map())]);
-    categorias = [...mapa.values()];
-    uso = usoCarregado;
-    if (dialogo.isConnected) desenharCategorias();
-  } catch {
-    notaCategorias.textContent = "Não foi possível carregar as categorias. Você pode salvar sem categoria.";
-  }
+  await seletor.carregar(fuso);
   agendarImpacto();
   return dialogo;
 }
