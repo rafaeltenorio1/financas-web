@@ -6,6 +6,7 @@ import { chaveDoDia, chaveDoMes, compararMeses, diaNoFuso, diasEntre, diasNoMes,
 import { moeda } from "../formatos.js";
 import { iconeDaTransacao } from "../painel/componentes.js";
 import { avisar } from "../avisos.js";
+import { confirmar } from "../confirmar.js";
 import { abrirFormularioConta, FORMAS } from "../conta-form.js";
 import { esquecerCachesDoFormulario } from "../transacao-form.js";
 
@@ -13,6 +14,7 @@ const MESES_CURTOS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "s
 const SEMANA = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 const PERIODO_TEXTO = { mensal: "todo mês", semanal: "toda semana", anual: "todo ano" };
 const nomeDoMes = new Intl.DateTimeFormat("pt-BR", { month: "long", timeZone: "UTC" });
+const dataComAno = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 const diaLongo = new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
 
 const paraData = (chave) => {
@@ -56,7 +58,7 @@ function textoQuando(dias) {
 }
 
 function iconeDaConta(conta) {
-  return iconeDaTransacao({ nome: conta.nome, id_categoria: conta.id_categoria });
+  return iconeDaTransacao({ nome: conta.nome, id_categoria: conta.id_categoria, icone: conta.icone });
 }
 
 export async function montar(raiz) {
@@ -69,7 +71,7 @@ export async function montar(raiz) {
   let contas = [];
   let pagas = [];
   let pagarAberto = null;
-  let menuAberto = null;
+  let aberta = null;
 
   const anuncio = el("p", { class: "sr", "aria-live": "polite" });
   const nova = el("button", { type: "button", class: "btn btn-primario" }, icone("mais", "ic-sm"), "Nova conta");
@@ -118,50 +120,55 @@ export async function montar(raiz) {
   vistaLista.addEventListener("click", () => escolherVista(false));
   vistaCalendario.addEventListener("click", () => escolherVista(true));
 
-  function fecharMenu() {
-    if (!menuAberto) return;
-    menuAberto.menu.remove();
-    menuAberto.botao.setAttribute("aria-expanded", "false");
-    menuAberto = null;
+  function focarLinha(id) {
+    grade.querySelector(`[data-conta="${CSS.escape(id)}"] .ct-abrir`)?.focus();
   }
 
-  function abrirMenu(botao, conta) {
-    const jaAberto = menuAberto?.botao === botao;
-    fecharMenu();
-    if (jaAberto) return;
-    const itens = [];
-    const opcao = (rotulo, simbolo, acao, classe = "") => {
-      const b = el("button", { type: "button", role: "menuitem", class: classe }, icone(simbolo, "ic-sm"), rotulo);
-      b.addEventListener("click", () => {
-        fecharMenu();
-        acao();
-      });
-      itens.push(b);
+  function alternarDetalhe(conta) {
+    aberta = aberta === conta.id_conta_recorrente ? null : conta.id_conta_recorrente;
+    if (aberta) pagarAberto = null;
+    desenharLista();
+    focarLinha(conta.id_conta_recorrente);
+  }
+
+  function fecharDetalhe(devolverFoco) {
+    if (!aberta) return;
+    const id = aberta;
+    aberta = null;
+    desenharLista();
+    if (devolverFoco) focarLinha(id);
+  }
+
+  function detalheDaConta(conta) {
+    const acao = (rotulo, simbolo, executar, classe = "btn-secundario") => {
+      const botao = el("button", { type: "button", class: `btn ${classe}` }, icone(simbolo, "ic-sm"), rotulo);
+      botao.addEventListener("click", executar);
+      return botao;
     };
+    const botoes = [];
     if (conta.ativa) {
-      opcao(conta.tipo === "receita" ? "Recebi" : "Pagar", "sucesso", () => abrirPagar(conta), "so-celular");
-      opcao("Pular este vencimento", "proximo", () => pular(conta));
+      botoes.push(acao(conta.tipo === "receita" ? "Recebi" : "Pagar", "sucesso", () => abrirPagar(conta), "btn-primario so-celular"));
+      botoes.push(acao("Pular este vencimento", "proximo", () => pular(conta)));
     }
-    opcao("Editar", "ajustes", () => abrirFormularioConta({ conta, aoSalvar: () => carregar() }));
-    opcao(conta.ativa ? "Pausar" : "Reativar", conta.ativa ? "cadeado" : "sucesso", () => alternarAtiva(conta));
-    opcao("Apagar", "fechar", () => apagar(conta), "perigo");
-    const menu = el("div", { class: "ct-menu", role: "menu", "aria-label": `Opções de ${conta.nome}` }, ...itens);
-    const visiveis = () => itens.filter((item) => item.offsetParent !== null);
-    menu.addEventListener("keydown", (evento) => {
-      const lista = visiveis();
-      const i = lista.indexOf(document.activeElement);
-      if (evento.key === "ArrowDown") {
-        evento.preventDefault();
-        lista[(i + 1) % lista.length].focus();
-      } else if (evento.key === "ArrowUp") {
-        evento.preventDefault();
-        lista[(i - 1 + lista.length) % lista.length].focus();
-      }
-    });
-    botao.parentElement.append(menu);
-    botao.setAttribute("aria-expanded", "true");
-    menuAberto = { botao, menu };
-    visiveis()[0]?.focus();
+    botoes.push(acao("Editar", "ajustes", () => abrirFormularioConta({ conta, aoSalvar: () => carregar() })));
+    botoes.push(acao(conta.ativa ? "Pausar" : "Reativar", conta.ativa ? "cadeado" : "sucesso", () => alternarAtiva(conta)));
+    botoes.push(acao("Apagar", "fechar", () => apagar(conta), "btn-secundario ct-perigo"));
+    const periodo = PERIODO_TEXTO[conta.periodicidade];
+    const itens = [
+      ["Categoria", categoria(conta.id_categoria)?.nome ?? "Sem categoria"],
+      ["Como costuma pagar", FORMAS.find(([valor]) => valor === conta.forma_pagamento)?.[1] ?? "Não informado"],
+      ["Repete", periodo.charAt(0).toUpperCase() + periodo.slice(1)],
+      ["Termina", conta.data_fim ? dataComAno.format(paraData(conta.data_fim)) : "Sem data para acabar"],
+      ["Lembrete por e-mail", conta.avisar ? "Ligado" : "Desligado"],
+    ];
+    const dl = el("dl", {}, itens.map(([rotulo, valor]) => el("div", {}, el("dt", { texto: rotulo }), el("dd", { texto: valor }))));
+    if (conta.descricao) dl.append(el("div", { class: "inteiro" }, el("dt", { texto: "Observação" }), el("dd", { texto: conta.descricao })));
+    return el(
+      "div",
+      { class: "ct-detalhe", id: `detalhe-${conta.id_conta_recorrente}`, role: "region", "aria-label": `Opções de ${conta.nome}` },
+      dl,
+      el("div", { class: "ct-detalhe-botoes" }, ...botoes),
+    );
   }
 
   async function pular(conta) {
@@ -169,6 +176,38 @@ export async function montar(raiz) {
       const atualizada = await api.post(`/contas-recorrentes/${conta.id_conta_recorrente}/pular`);
       avisar(`Vencimento pulado. Próximo: ${atualizada.ativa ? dataCurta(atualizada.proximo_vencimento) : "nenhum, a conta terminou"}.`);
       carregar();
+    } catch (erro) {
+      if (!(erro instanceof ErroApi)) throw erro;
+      avisar(erro.message, { tipo: "erro" });
+    }
+  }
+
+  function sino(conta) {
+    const ligado = conta.avisar;
+    const botao = el("button", { type: "button", class: "ct-sino", "aria-pressed": String(ligado), title: ligado ? "Lembrete por e-mail ligado" : "Lembrete por e-mail desligado" }, icone(ligado ? "sino-ativo" : "sino-off"));
+    botao.setAttribute("aria-label", `Lembrete por e-mail de ${conta.nome}`);
+    botao.addEventListener("click", () => alternarLembrete(conta));
+    return botao;
+  }
+
+  async function alternarLembrete(conta) {
+    const ligar = !conta.avisar;
+    if (!ligar) {
+      const sim = await confirmar({
+        titulo: "Desligar os lembretes?",
+        texto: `Você deixa de receber e-mails antes do vencimento de “${conta.nome}”. Dá para ligar de novo tocando no sino.`,
+        confirmar: "Desligar lembretes",
+        cancelar: "Manter ligados",
+        perigo: true,
+      });
+      if (!sim) return;
+    }
+    try {
+      await api.patch(`/contas-recorrentes/${conta.id_conta_recorrente}`, { avisar: ligar });
+      conta.avisar = ligar;
+      avisar(ligar ? `Lembretes de ${conta.nome} ligados.` : `Lembretes de ${conta.nome} desligados.`);
+      desenharLista();
+      grade.querySelector(`[data-conta="${CSS.escape(conta.id_conta_recorrente)}"] .ct-sino`)?.focus();
     } catch (erro) {
       if (!(erro instanceof ErroApi)) throw erro;
       avisar(erro.message, { tipo: "erro" });
@@ -187,7 +226,13 @@ export async function montar(raiz) {
   }
 
   async function apagar(conta) {
-    if (!confirm(`Apagar a conta “${conta.nome}”? As transações que você já pagou continuam no histórico.`)) return;
+    const sim = await confirmar({
+      titulo: `Apagar a conta “${conta.nome}”?`,
+      texto: "As transações que você já pagou continuam no histórico.",
+      confirmar: "Apagar conta",
+      perigo: true,
+    });
+    if (!sim) return;
     try {
       await api.delete(`/contas-recorrentes/${conta.id_conta_recorrente}`);
       avisar(`Conta ${conta.nome} apagada.`);
@@ -205,6 +250,7 @@ export async function montar(raiz) {
 
   function abrirPagar(conta) {
     pagarAberto = pagarAberto === conta.id_conta_recorrente ? null : conta.id_conta_recorrente;
+    if (pagarAberto) aberta = null;
     desenharLista();
     if (pagarAberto) grade.querySelector(`#pagar-${conta.id_conta_recorrente} input`)?.focus();
   }
@@ -219,7 +265,7 @@ export async function montar(raiz) {
     });
     const data = el("input", { type: "date", class: "entrada", value: hojeChave, max: hojeChave });
     const forma = el("select", { class: "entrada" }, el("option", { value: "", texto: "Não informar" }), FORMAS.map(([v, r]) => el("option", { value: v, selected: v === conta.forma_pagamento, texto: r })));
-    const confirmar = el("button", { type: "submit", class: "btn btn-primario", texto: recebimento ? "Confirmar recebimento" : "Confirmar pagamento" });
+    const botaoConfirmar = el("button", { type: "submit", class: "btn btn-primario", texto: recebimento ? "Confirmar recebimento" : "Confirmar pagamento" });
     const cancelar = el("button", { type: "button", class: "btn btn-secundario", texto: "Cancelar" });
     const aviso = el("div", { class: "mensagem", role: "alert" });
     cancelar.addEventListener("click", () => abrirPagar(conta));
@@ -229,7 +275,7 @@ export async function montar(raiz) {
       el("label", {}, recebimento ? "Valor recebido" : "Valor pago", valor),
       el("label", {}, "Data", data),
       el("label", {}, "Forma", forma),
-      el("div", { class: "ct-pagar-botoes" }, cancelar, confirmar),
+      el("div", { class: "ct-pagar-botoes" }, cancelar, botaoConfirmar),
       aviso,
     );
     form.addEventListener("submit", async (evento) => {
@@ -245,7 +291,7 @@ export async function montar(raiz) {
         return data.focus();
       }
       const dataHora = data.value === hojeChave ? new Date().toISOString() : instanteLocal({ ...dia, hora: 12 }, fuso).toISOString();
-      ocupado(confirmar, true, "Salvando…");
+      ocupado(botaoConfirmar, true, "Salvando…");
       try {
         const resultado = await api.post(`/contas-recorrentes/${conta.id_conta_recorrente}/pagar`, {
           valor: (Number(centavos) / 100).toFixed(2),
@@ -259,7 +305,7 @@ export async function montar(raiz) {
         carregar();
       } catch (erro) {
         if (!(erro instanceof ErroApi)) throw erro;
-        ocupado(confirmar, false);
+        ocupado(botaoConfirmar, false);
         mensagem(aviso, "erro", erro.message);
       }
     });
@@ -274,29 +320,36 @@ export async function montar(raiz) {
     const meta = el("span", { class: "ct-meta" }, el("span", { class: classe, texto: quando }), `, ${PERIODO_TEXTO[conta.periodicidade]}`);
     if (cat) meta.append(`, ${cat.nome}`);
     const direita = el("div", { class: "ct-direita" }, el("span", { class: `ct-valor${conta.tipo === "receita" ? " receita" : ""}`, texto: moeda(conta.valor) }));
+    if (conta.ativa) direita.append(sino(conta));
     if (conta.ativa) {
       const pagar = el("button", { type: "button", class: "btn btn-secundario btn-pagar", "aria-expanded": String(pagarAberto === conta.id_conta_recorrente), texto: conta.tipo === "receita" ? "Recebi" : "Pagar" });
       pagar.setAttribute("aria-label", `${conta.tipo === "receita" ? "Registrar recebimento de" : "Pagar"} ${conta.nome}`);
       pagar.addEventListener("click", () => abrirPagar(conta));
       direita.append(pagar);
     }
-    const menuBotao = el("button", { type: "button", class: "ct-menu-botao", "aria-haspopup": "menu", "aria-expanded": "false", "aria-label": `Mais opções de ${conta.nome}` }, icone("opcoes"));
-    menuBotao.addEventListener("click", () => abrirMenu(menuBotao, conta));
-    direita.append(el("div", { class: "ct-menu-lugar" }, menuBotao));
+    const estaAberta = aberta === conta.id_conta_recorrente;
+    const abrir = el(
+      "button",
+      { type: "button", class: "ct-abrir", "aria-expanded": String(estaAberta), "aria-controls": estaAberta ? `detalhe-${conta.id_conta_recorrente}` : null },
+      el("span", { class: "ct-data", "aria-hidden": "true" }, el("b", { texto: dia }), el("small", { texto: MESES_CURTOS[mes - 1] })),
+      el("span", { class: "sr", texto: `Vencimento em ${dia} de ${nomeDoMes.format(new Date(Date.UTC(2000, mes - 1, 1)))}.` }),
+      iconeDaConta(conta),
+      el("span", { class: "ct-info" }, el("span", { class: "ct-nome", texto: conta.nome }), meta),
+    );
+    abrir.addEventListener("click", () => alternarDetalhe(conta));
     const item = el(
       "div",
-      { class: "ct-conta" },
-      el("div", { class: "ct-data", "aria-label": `Vencimento ${dia} de ${nomeDoMes.format(new Date(Date.UTC(2000, mes - 1, 1)))}` }, el("b", { texto: dia }), el("small", { texto: MESES_CURTOS[mes - 1] })),
-      iconeDaConta(conta),
-      el("div", { class: "ct-info" }, el("span", { class: "ct-nome", texto: conta.nome }), meta),
+      { class: "ct-conta", "data-conta": conta.id_conta_recorrente },
+      abrir,
       direita,
     );
+    item.classList.toggle("aberta", estaAberta);
+    if (estaAberta) item.append(detalheDaConta(conta));
     if (pagarAberto === conta.id_conta_recorrente) item.append(formularioPagar(conta));
     return item;
   }
 
   function desenharLista() {
-    fecharMenu();
     lista.replaceChildren();
     if (!contas.length) {
       const botao = el("button", { type: "button", class: "btn btn-primario", texto: "Cadastrar a primeira conta" });
@@ -446,13 +499,12 @@ export async function montar(raiz) {
   nova.addEventListener("click", () => abrirFormularioConta({ aoSalvar: () => carregar() }));
 
   function aoClicarFora(evento) {
-    if (menuAberto && !evento.target.closest(".ct-menu, .ct-menu-botao")) fecharMenu();
+    if (!aberta || document.querySelector("dialog[open]")) return;
+    if (evento.target.closest(".ct-conta, .aviso-flutuante")) return;
+    fecharDetalhe(false);
   }
   function aoTeclar(evento) {
-    if (evento.key !== "Escape" || !menuAberto) return;
-    const botao = menuAberto.botao;
-    fecharMenu();
-    botao.focus();
+    if (evento.key === "Escape" && aberta && !document.querySelector("dialog[open]")) fecharDetalhe(true);
   }
   document.addEventListener("pointerdown", aoClicarFora, true);
   document.addEventListener("keydown", aoTeclar);

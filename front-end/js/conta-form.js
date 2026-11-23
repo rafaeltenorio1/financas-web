@@ -1,4 +1,5 @@
 import { api, ErroApi } from "./api.js";
+import { confirmar } from "./confirmar.js";
 import { el, icone, mensagem, ocupado } from "./dom.js";
 import { usuarioAtual } from "./sessao.js";
 import { chaveDoDia, hoje } from "./datas.js";
@@ -6,6 +7,11 @@ import { moeda } from "./formatos.js";
 import { avisar } from "./avisos.js";
 import { criarSeletorDeCategorias } from "./seletor-categorias.js";
 import { esquecerCachesDoFormulario } from "./transacao-form.js";
+import { iconeDaTransacao } from "./painel/componentes.js";
+import { marcaDe } from "./marcas.js";
+import { categoria as categoriaPorId } from "./categorias.js";
+import { criarSeletorDeIcone, nomeDoCodigo } from "./seletor-icone.js";
+import { esquecerIconesDasContas } from "./contas-icones.js";
 
 export const FORMAS = [
   ["pix", "Pix"],
@@ -19,6 +25,19 @@ export const PERIODICIDADES = [
   ["semanal", "Toda semana"],
   ["anual", "Todo ano"],
 ];
+
+function textoDoLembrete() {
+  const usuario = usuarioAtual();
+  if (usuario && !usuario.email_verificado) return "Confirme seu e-mail para começar a receber os lembretes.";
+  const dias = usuario?.lembrete_dias_antes ?? 3;
+  const partes = [];
+  if (dias > 0) partes.push(dias === 1 ? "1 dia antes" : `${dias} dias antes`);
+  if (usuario?.lembrete_no_dia ?? true) partes.push("no dia");
+  if (usuario?.lembrete_atraso ?? true) partes.push("se atrasar");
+  if (!partes.length) return "Os lembretes estão desligados nas preferências da sua conta.";
+  const lista = partes.length > 1 ? `${partes.slice(0, -1).join(", ")} e ${partes.at(-1)}` : partes[0];
+  return `Você recebe um e-mail ${lista}.`;
+}
 
 function formatarCentavos(digitos) {
   return moeda(Number(digitos || "0") / 100);
@@ -46,8 +65,54 @@ export async function abrirFormularioConta({ conta = null, aoSalvar } = {}) {
     return botao;
   });
   const erroValor = el("p", { class: "campo-erro", id: "fc-valor-erro" });
-  const valor = el("input", { id: "fc-valor", name: "valor", inputmode: "numeric", autocomplete: "off", "aria-describedby": "fc-valor-ajuda fc-valor-erro", value: formatarCentavos(estado.centavos) });
+  const valor = el("input", { id: "fc-valor", name: "valor", inputmode: "numeric", autocomplete: "off", "aria-describedby": "fc-valor-erro", value: formatarCentavos(estado.centavos) });
   const erroNome = el("p", { class: "campo-erro", id: "fc-nome-erro" });
+  const iconeNome = el("button", { type: "button", class: "fc-nome-icone", "aria-expanded": "false", "aria-controls": "fc-seletor-icone", title: "Escolher ícone" });
+  iconeNome.setAttribute("aria-label", "Escolher ícone da conta");
+  const seletorIcone = criarSeletorDeIcone({
+    prefixo: "fc",
+    inicial: conta?.icone ?? null,
+    categoriaAtual: () => categoriaPorId(seletor.valor()),
+    aoMudar: () => desenharIconeNome(),
+  });
+  seletorIcone.bloco.hidden = true;
+  function desenharIconeNome() {
+    const escolhido = seletorIcone.valor();
+    iconeNome.replaceChildren(iconeDaTransacao({ nome: nome.value, id_categoria: seletor.valor(), icone: escolhido }), el("span", { class: "fc-nome-lapis", "aria-hidden": "true" }, icone("ajustes")));
+    const nomeDoIcone = escolhido ? nomeDoCodigo(escolhido) : marcaDe(nome.value)?.nome;
+    iconeNome.setAttribute("aria-label", nomeDoIcone ? `Ícone da conta: ${nomeDoIcone}. Trocar` : "Escolher ícone da conta");
+  }
+  const telaLarga = matchMedia("(min-width: 900px)");
+  function posicionarSeletorIcone() {
+    const bloco = seletorIcone.bloco;
+    bloco.classList.toggle("flutuante", telaLarga.matches);
+    if (bloco.hidden || !telaLarga.matches) {
+      bloco.style.left = bloco.style.top = "";
+      return;
+    }
+    const painel = dialogo.getBoundingClientRect();
+    const botao = iconeNome.getBoundingClientRect();
+    bloco.style.left = `${Math.max(12, painel.left - bloco.offsetWidth - 16)}px`;
+    bloco.style.top = `${Math.min(Math.max(12, botao.top - 12), innerHeight - bloco.offsetHeight - 12)}px`;
+  }
+  function mostrarSeletorIcone(abrir, devolverFoco = false) {
+    seletorIcone.bloco.hidden = !abrir;
+    iconeNome.setAttribute("aria-expanded", String(abrir));
+    if (abrir) {
+      seletorIcone.redesenhar();
+      posicionarSeletorIcone();
+      seletorIcone.focar();
+    } else if (devolverFoco) {
+      iconeNome.focus();
+    }
+  }
+  iconeNome.addEventListener("click", () => mostrarSeletorIcone(seletorIcone.bloco.hidden));
+  seletorIcone.bloco.addEventListener("keydown", (evento) => {
+    if (evento.key !== "Escape") return;
+    evento.preventDefault();
+    evento.stopPropagation();
+    mostrarSeletorIcone(false, true);
+  });
   const nome = el("input", { class: "entrada", id: "fc-nome", name: "nome", maxlength: 255, autocomplete: "off", placeholder: "Ex.: Aluguel, Internet, Netflix", "aria-describedby": "fc-nome-erro" });
   nome.value = conta?.nome ?? "";
 
@@ -58,15 +123,25 @@ export async function abrirFormularioConta({ conta = null, aoSalvar } = {}) {
   data.value = editando ? conta.proximo_vencimento : chaveDoDia(hoje(fuso));
   const erroData = el("p", { class: "campo-erro", id: "fc-data-erro" });
   const temFim = el("input", { type: "checkbox", id: "fc-tem-fim", name: "tem-fim" });
-  const fim = el("input", { type: "date", class: "entrada ft-data", id: "fc-fim", name: "fim", "aria-label": "Último vencimento", "aria-describedby": "fc-fim-erro" });
+  const fim = el("input", { type: "date", class: "entrada ft-data ft-data-fim", id: "fc-fim", name: "fim", "aria-label": "Último vencimento", "aria-describedby": "fc-fim-erro" });
   const erroFim = el("p", { class: "campo-erro", id: "fc-fim-erro" });
   if (conta?.data_fim) {
     temFim.checked = true;
     fim.value = conta.data_fim;
   }
   fim.hidden = !temFim.checked;
-  const avisarCaixa = el("input", { type: "checkbox", id: "fc-avisar", name: "avisar" });
+  const iconeLembrete = el("span", { class: "fc-lembrete-ic", "aria-hidden": "true" });
+  const avisarCaixa = el("input", { type: "checkbox", role: "switch", id: "fc-avisar", name: "avisar", "aria-describedby": "fc-avisar-ajuda" });
   avisarCaixa.checked = conta?.avisar ?? true;
+  const ajudaAvisar = el("span", { class: "fc-lembrete-ajuda", id: "fc-avisar-ajuda", texto: textoDoLembrete() });
+  const blocoAvisar = el(
+    "label",
+    { class: "fc-lembrete", for: "fc-avisar" },
+    iconeLembrete,
+    el("span", { class: "fc-lembrete-texto" }, el("strong", { texto: "Lembrete por e-mail" }), ajudaAvisar),
+    avisarCaixa,
+    el("span", { class: "interruptor", "aria-hidden": "true" }),
+  );
   const chipsForma = el("div", { class: "ft-chips", role: "group", "aria-labelledby": "fc-titulo-forma" });
   const descricao = el("textarea", { class: "entrada", id: "fc-descricao", name: "descricao", maxlength: 1000, "aria-label": "Observação" });
   descricao.value = conta?.descricao ?? "";
@@ -88,16 +163,15 @@ export async function abrirFormularioConta({ conta = null, aoSalvar } = {}) {
         el("div", { class: "ft-tipo", role: "group", "aria-label": "Tipo" }, ...botoesTipo),
         el("label", { for: "fc-valor", texto: "Valor" }),
         valor,
-        el("p", { class: "campo-ajuda", id: "fc-valor-ajuda", texto: "Digite só os números: 4590 vira R$ 45,90." }),
         erroValor,
       ),
-      el("div", { class: "ft-secao campo" }, el("label", { class: "ft-rotulo", for: "fc-nome", texto: "Nome" }), nome, erroNome),
+      el("div", { class: "ft-secao campo" }, el("label", { class: "ft-rotulo", for: "fc-nome", texto: "Nome" }), el("div", { class: "fc-nome-linha" }, iconeNome, nome), erroNome, seletorIcone.bloco),
       el("div", { class: "ft-secao" }, el("h3", { id: "fc-titulo-periodo", texto: "Repete" }), chipsPeriodo, notaPeriodo),
       el("div", { class: "ft-secao campo" }, el("label", { class: "ft-rotulo", for: "fc-data", texto: rotuloData }), data, erroData),
+      el("div", { class: "ft-secao" }, blocoAvisar),
       el("div", { class: "ft-secao" }, el("label", { class: "marcar", for: "fc-tem-fim" }, temFim, "Tem data para acabar"), fim, erroFim),
       el("div", { class: "ft-secao" }, el("h3", { id: "fc-titulo-categoria", texto: "Categoria" }), seletor.bloco),
       el("div", { class: "ft-secao" }, el("h3", { id: "fc-titulo-forma", texto: "Como costuma pagar" }), chipsForma),
-      el("div", { class: "ft-secao" }, el("label", { class: "marcar", for: "fc-avisar" }, avisarCaixa, "Me avisar por e-mail antes de vencer")),
       el("div", { class: "ft-secao" }, observacao),
     ),
     el("div", { class: "ft-rodape" }, avisoErro, salvar),
@@ -142,9 +216,18 @@ export async function abrirFormularioConta({ conta = null, aoSalvar } = {}) {
     else campo.removeAttribute("aria-invalid");
   }
 
-  const retrato = () => JSON.stringify([estado.tipo, estado.centavos, estado.periodicidade, estado.forma, seletor.valor(), nome.value, data.value, temFim.checked, fim.value, avisarCaixa.checked, descricao.value]);
+  const retrato = () => JSON.stringify([estado.tipo, estado.centavos, estado.periodicidade, estado.forma, seletor.valor(), seletorIcone.valor(), nome.value, data.value, temFim.checked, fim.value, avisarCaixa.checked, descricao.value]);
   const inicial = retrato();
-  const podeFechar = () => retrato() === inicial || confirm(editando ? "Descartar as alterações desta conta?" : "Descartar esta conta sem salvar?");
+  async function pedirFechamento() {
+    if (retrato() === inicial) return true;
+    return confirmar({
+      titulo: editando ? "Descartar as alterações?" : "Descartar esta conta?",
+      texto: editando ? "O que você mudou nesta conta vai se perder." : "O que você preencheu ainda não foi salvo.",
+      confirmar: "Descartar",
+      cancelar: "Continuar editando",
+      perigo: true,
+    });
+  }
 
   valor.addEventListener("input", () => {
     estado.centavos = valor.value.replace(/\D/g, "").replace(/^0+/, "").slice(0, 11);
@@ -152,7 +235,11 @@ export async function abrirFormularioConta({ conta = null, aoSalvar } = {}) {
     valor.setSelectionRange(valor.value.length, valor.value.length);
     marcar(valor, erroValor, "");
   });
-  nome.addEventListener("input", () => marcar(nome, erroNome, ""));
+  nome.addEventListener("input", () => {
+    marcar(nome, erroNome, "");
+    desenharIconeNome();
+  });
+  seletor.bloco.addEventListener("click", () => queueMicrotask(desenharIconeNome));
   data.addEventListener("input", () => marcar(data, erroData, ""));
   fim.addEventListener("input", () => marcar(fim, erroFim, ""));
   temFim.addEventListener("change", () => {
@@ -160,13 +247,27 @@ export async function abrirFormularioConta({ conta = null, aoSalvar } = {}) {
     if (temFim.checked) fim.focus();
     else marcar(fim, erroFim, "");
   });
-  fechar.addEventListener("click", () => {
-    if (podeFechar()) dialogo.close();
+  fechar.addEventListener("click", async () => {
+    if (await pedirFechamento()) dialogo.close();
   });
-  dialogo.addEventListener("cancel", (evento) => {
-    if (!podeFechar()) evento.preventDefault();
+  dialogo.addEventListener("cancel", async (evento) => {
+    evento.preventDefault();
+    if (await pedirFechamento()) dialogo.close();
   });
+  dialogo.pedirFechamento = pedirFechamento;
+  dialogo.addEventListener("pointerdown", (evento) => {
+    if (seletorIcone.bloco.hidden) return;
+    if (seletorIcone.bloco.contains(evento.target) || iconeNome.contains(evento.target)) return;
+    mostrarSeletorIcone(false);
+  });
+  dialogo.addEventListener("scroll", posicionarSeletorIcone, { passive: true });
+  window.addEventListener("resize", posicionarSeletorIcone);
+  avisarCaixa.addEventListener("change", desenharLembrete);
+  function desenharLembrete() {
+    iconeLembrete.replaceChildren(icone(avisarCaixa.checked ? "sino-ativo" : "sino-off"));
+  }
   dialogo.addEventListener("close", () => {
+    window.removeEventListener("resize", posicionarSeletorIcone);
     dialogo.remove();
     if (origemDoFoco?.isConnected) origemDoFoco.focus();
   });
@@ -190,6 +291,7 @@ export async function abrirFormularioConta({ conta = null, aoSalvar } = {}) {
       forma_pagamento: estado.forma,
       data_fim: temFim.checked ? fim.value : null,
       avisar: avisarCaixa.checked,
+      icone: seletorIcone.valor(),
       descricao: descricao.value.trim() || null,
     };
     const corpo = editando ? { ...comum, proximo_vencimento: data.value } : { ...comum, periodicidade: estado.periodicidade, data_inicio: data.value };
@@ -197,6 +299,7 @@ export async function abrirFormularioConta({ conta = null, aoSalvar } = {}) {
     try {
       const salva = editando ? await api.patch(`/contas-recorrentes/${conta.id_conta_recorrente}`, corpo) : await api.post("/contas-recorrentes", corpo);
       esquecerCachesDoFormulario();
+      esquecerIconesDasContas();
       dialogo.close("salvo");
       avisar(editando ? `Conta ${salva.nome} atualizada.` : `Conta ${salva.nome} cadastrada.`);
       aoSalvar?.(salva);
@@ -217,11 +320,14 @@ export async function abrirFormularioConta({ conta = null, aoSalvar } = {}) {
   });
 
   document.body.append(dialogo);
+  desenharLembrete();
+  desenharIconeNome();
   mudarTipo(estado.tipo);
   desenharPeriodos();
   desenharFormas();
   dialogo.showModal();
   if (matchMedia("(min-width: 900px)").matches) (editando ? nome : valor).focus();
   await seletor.carregar(fuso);
+  if (dialogo.isConnected) desenharIconeNome();
   return dialogo;
 }
