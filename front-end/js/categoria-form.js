@@ -155,7 +155,7 @@ export function abrirFormularioCategoria({ categoria = null, tipo = "despesa", c
     estado.outraCor = true;
     atualizarCor();
     seletorCor.focar();
-    seletorCor.painel.scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    seletorCor.painel.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
 
   function fecharSeletor(devolverFoco = false) {

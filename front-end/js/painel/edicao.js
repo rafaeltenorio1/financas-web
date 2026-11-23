@@ -122,7 +122,6 @@ export function criarEdicao({ grade, adicionar, titulos, aplicarLayout, alturaEm
     const caixa = secao.getBoundingClientRect();
     const inicio = { x: evento.clientX, y: evento.clientY };
     let ponteiro = { ...inicio };
-    const suave = !matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const marcador = el("div", { class: `cartao-marcador t-${largura}`, "aria-hidden": "true" });
     marcador.style.height = `${caixa.height}px`;
@@ -151,7 +150,6 @@ export function criarEdicao({ grade, adicionar, titulos, aplicarLayout, alturaEm
       for (const o of lista) o.getAnimations().forEach((a) => a.cancel());
       mudar();
       medir();
-      if (!suave) return;
       for (const o of lista) {
         const a = antes.get(o);
         const d = o.getBoundingClientRect();
@@ -222,12 +220,10 @@ export function criarEdicao({ grade, adicionar, titulos, aplicarLayout, alturaEm
         const larguras = Object.fromEntries(rascunho.cartoes.map((c) => [c.id, c.largura]));
         rascunho.cartoes = ordem.map((cid) => ({ id: cid, largura: larguras[cid] }));
         atualizar();
-        if (suave) {
-          const final = secao.getBoundingClientRect();
-          const dx = ponteiro.x - inicio.x + caixa.left - final.left;
-          const dy = ponteiro.y - inicio.y + caixa.top - final.top;
-          if (Math.abs(dx) > 1 || Math.abs(dy) > 1) secao.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }], { duration: 180, easing: "cubic-bezier(0.2, 0, 0, 1)" });
-        }
+        const final = secao.getBoundingClientRect();
+        const dx = ponteiro.x - inicio.x + caixa.left - final.left;
+        const dy = ponteiro.y - inicio.y + caixa.top - final.top;
+        if (Math.abs(dx) > 1 || Math.abs(dy) > 1) secao.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }], { duration: 180, easing: "cubic-bezier(0.2, 0, 0, 1)" });
         anunciar(`${titulo(id)} na posição ${posicao(id) + 1} de ${rascunho.cartoes.length}.`);
       }
       alca.focus();

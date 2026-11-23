@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="abrindo">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -11,6 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/tokens.css">
   <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/marca.css">
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/auth.css">
   <link rel="stylesheet" href="css/painel.css">
@@ -23,9 +24,14 @@
   <script type="module" src="js/app.js"></script>
 </head>
 <body>
-  <div id="app">
-    <p class="carregando-app">Carregando…</p>
+  <div class="abertura" id="abertura" role="status" aria-label="Carregando o Finanças">
+    <svg class="logo logo-animada" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+      <rect class="logo-fundo" width="32" height="32" rx="10"/>
+      <rect class="logo-contorno" x="1.1" y="1.1" width="29.8" height="29.8" rx="9" pathLength="100"/>
+      <path class="logo-linha" d="M8 21l5-5 4 3 7-8" pathLength="100"/>
+    </svg>
   </div>
+  <div id="app"></div>
   <noscript>O Finanças precisa de JavaScript ativado para funcionar.</noscript>
 </body>
 </html>

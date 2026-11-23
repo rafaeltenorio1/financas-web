@@ -1,29 +1,28 @@
 import { el, icone } from "../dom.js";
+import { logo } from "../logo.js";
 
 const SVG = "http://www.w3.org/2000/svg";
-
-function sinalDaMarca() {
-  const svg = document.createElementNS(SVG, "svg");
-  svg.setAttribute("viewBox", "0 0 32 32");
-  svg.setAttribute("aria-hidden", "true");
-  const fundo = document.createElementNS(SVG, "rect");
-  for (const [k, v] of Object.entries({ width: 32, height: 32, rx: 10, fill: "var(--destaque)" })) fundo.setAttribute(k, v);
-  const linha = document.createElementNS(SVG, "path");
-  for (const [k, v] of Object.entries({ d: "M8 21l5-5 4 3 7-8", fill: "none", stroke: "var(--fundo)", "stroke-width": 2.6, "stroke-linecap": "round", "stroke-linejoin": "round" })) linha.setAttribute(k, v);
-  svg.append(fundo, linha);
-  return svg;
-}
+const BORDA = "M32 3H45A16 16 0 0 1 61 19V45A16 16 0 0 1 45 61H19A16 16 0 0 1 3 45V19A16 16 0 0 1 19 3Z";
 
 export function telaAuth(...conteudo) {
   return el(
     "div",
     { class: "auth" },
-    el("div", { class: "auth-caixa" }, el("a", { class: "auth-marca", href: "#/entrar" }, sinalDaMarca(), el("span", { texto: "Finanças", translate: "no" })), ...conteudo),
+    el("div", { class: "auth-caixa" }, el("a", { class: "auth-marca", href: "#/entrar" }, logo({ animada: true }), el("span", { texto: "Finanças", translate: "no" })), ...conteudo),
   );
 }
 
 export function selo(idIcone) {
-  return el("div", { class: "selo-anel", "aria-hidden": "true" }, el("span", {}, icone(idIcone)));
+  const svg = document.createElementNS(SVG, "svg");
+  svg.setAttribute("viewBox", "0 0 64 64");
+  for (const classe of ["selo-trilho", "selo-verde", "selo-vermelho"]) {
+    const caminho = document.createElementNS(SVG, "path");
+    caminho.setAttribute("class", classe);
+    caminho.setAttribute("d", BORDA);
+    caminho.setAttribute("pathLength", "100");
+    svg.append(caminho);
+  }
+  return el("div", { class: "selo-anel", "aria-hidden": "true" }, svg, el("span", { class: "selo-anel-centro" }, icone(idIcone)));
 }
 
 export function campo({ id, rotulo, ajuda, acessorio, ...atributos }) {

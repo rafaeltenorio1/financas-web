@@ -130,9 +130,6 @@ button.ct-dia:hover { background: var(--superficie-2); }
 .fc-lembrete input:checked ~ .interruptor { background: var(--aviso); }
 .fc-lembrete input:checked ~ .interruptor::after { transform: translateX(18px); background: var(--no-claro); }
 .fc-lembrete input:focus-visible ~ .interruptor { outline: 3px solid var(--texto); outline-offset: 2px; }
-@media (prefers-reduced-motion: reduce) {
-  .interruptor, .interruptor::after { transition: none; }
-}
 
 .ct-sino { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; color: var(--texto-suave); opacity: 0.6; }
 .ct-sino[aria-pressed="true"] { color: var(--aviso); opacity: 1; }

@@ -19,25 +19,6 @@
 .auth-marca svg { width: 32px; height: 32px; }
 .auth-cartao { display: grid; }
 
-.selo-anel {
-  width: 64px;
-  height: 64px;
-  margin-bottom: var(--esp-5);
-  border-radius: 22px;
-  display: grid;
-  place-items: center;
-  background: conic-gradient(var(--receita) 0 50%, var(--despesa) 50% 100%);
-}
-.selo-anel span {
-  width: 52px;
-  height: 52px;
-  border-radius: 17px;
-  display: grid;
-  place-items: center;
-  background: var(--fundo);
-  color: var(--destaque);
-}
-
 .auth-titulo { font-size: var(--texto-2xl); font-weight: 800; letter-spacing: -0.03em; }
 .auth-sub { margin-top: 6px; color: var(--texto-suave); }
 .auth-cartao .mensagem { margin-top: var(--esp-5); }
@@ -68,7 +49,7 @@
     border-radius: var(--raio-xl);
     background: var(--superficie);
   }
-  .auth-cartao .selo-anel span { background: var(--superficie); }
+  .auth-cartao .selo-trilho { fill: var(--superficie); }
 }
 @media (min-width: 900px) {
   .auth-cartao { padding: var(--esp-10) var(--esp-8); }

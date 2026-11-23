@@ -98,7 +98,7 @@ export function iniciarRotas(raiz, layout) {
   raizApp = raiz;
   montarLayout = layout;
   window.addEventListener("hashchange", renderizar);
-  renderizar();
+  return renderizar();
 }
 
 export function recarregar() {

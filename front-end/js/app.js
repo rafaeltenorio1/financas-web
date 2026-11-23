@@ -1,6 +1,7 @@
 import { el, icone } from "./dom.js";
 import { registrar, iniciarRotas, navegar, caminhoAtual, recarregar } from "./rotas.js";
 import { usuarioAtual, encerrarLocalmente, sair } from "./sessao.js";
+import { logo } from "./logo.js";
 
 const ITENS_NAV = [
   { caminho: "/", rotulo: "Painel", icone: "painel" },
@@ -35,7 +36,7 @@ export function mensagemParaProximaTela() {
 }
 
 function navegacao(caminho) {
-  const nav = el("nav", { class: "nav", "aria-label": "Principal" }, el("a", { class: "nav-marca", href: "#/", texto: "Finanças", translate: "no" }));
+  const nav = el("nav", { class: "nav", "aria-label": "Principal" }, el("a", { class: "nav-marca", href: "#/", translate: "no" }, logo(), el("span", { texto: "Finanças" })));
   for (const item of ITENS_NAV) {
     const atual = item.caminho === caminho;
     const link = el(
@@ -95,4 +96,24 @@ export async function sairDaConta() {
   }
 }
 
-iniciarRotas(document.getElementById("app"), layout);
+const RESPIRO_ABERTURA = 300;
+const LIMITE_ABERTURA = 3500;
+
+const fimDaAbertura = new Promise((resolver) => {
+  const linha = document.querySelector("#abertura .logo-linha");
+  if (!linha) return resolver();
+  linha.addEventListener("animationend", () => setTimeout(resolver, RESPIRO_ABERTURA), { once: true });
+  setTimeout(resolver, LIMITE_ABERTURA);
+});
+
+function tirarAbertura() {
+  const abertura = document.getElementById("abertura");
+  if (!abertura) return document.documentElement.classList.remove("abrindo");
+  fimDaAbertura.then(() => {
+    document.documentElement.classList.remove("abrindo");
+    abertura.classList.add("saindo");
+    setTimeout(() => abertura.remove(), 400);
+  });
+}
+
+iniciarRotas(document.getElementById("app"), layout).finally(tirarAbertura);
