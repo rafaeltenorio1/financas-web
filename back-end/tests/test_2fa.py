@@ -60,7 +60,7 @@ async def test_iniciar_devolve_segredo_e_guarda_cifrado(logado, db):
     assert resposta.headers["cache-control"] == "no-store"
     dados = resposta.json()
     assert dados["uri"].startswith("otpauth://totp/")
-    assert "issuer=Finan" in dados["uri"]
+    assert "issuer=Balancia" in dados["uri"]
 
     usuario = await db.scalar(select(Usuario))
     assert usuario.totp_segredo != dados["segredo"]

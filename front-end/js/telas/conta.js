@@ -85,9 +85,9 @@ export async function montar(raiz, { navegar }) {
       return linha({
         ic: "c-celular",
         titulo: "Instalar o app",
-        descricao: "Abra o Finanças direto da tela inicial",
+        descricao: "Abra a Balancia direto da tela inicial",
         aoClicar: async () => {
-          if (await instalar()) avisar("Finanças instalado neste aparelho.");
+          if (await instalar()) avisar("Balancia instalada neste aparelho.");
         },
       });
     }
@@ -103,7 +103,7 @@ export async function montar(raiz, { navegar }) {
         el("li", { texto: "Escolha “Adicionar à Tela de Início” e toque em Adicionar." }),
       ),
     );
-    const botao = linha({ ic: "c-celular", titulo: "Instalar o app", descricao: "Abra o Finanças direto da tela inicial" });
+    const botao = linha({ ic: "c-celular", titulo: "Instalar o app", descricao: "Abra a Balancia direto da tela inicial" });
     botao.setAttribute("aria-expanded", "false");
     botao.setAttribute("aria-controls", "cf-passos-instalar");
     botao.addEventListener("click", () => {
@@ -189,7 +189,7 @@ export async function montar(raiz, { navegar }) {
       ),
       secao(
         "Perfil",
-        linha({ ic: "conta", titulo: "Nome", descricao: "Como o Finanças chama você", valor: u.nome, aoClicar: () => janelaNome({ aoSalvar: desenhar }) }),
+        linha({ ic: "conta", titulo: "Nome", descricao: "Como a Balancia chama você", valor: u.nome, aoClicar: () => janelaNome({ aoSalvar: desenhar }) }),
         linha({ ic: "info", titulo: "E-mail", descricao: "Para entrar e receber avisos", valor: u.email, aoClicar: () => janelaEmail({ aoSalvar: desenhar }) }),
       ),
       secao(

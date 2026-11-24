@@ -49,7 +49,7 @@ def _montar(
             f"Se o botão não funcionar, copie este endereço no navegador: {escape(link)}</p>"
         )
 
-    texto = "\n\n".join([*linhas_texto, "Finanças"])
+    texto = "\n\n".join([*linhas_texto, "Balancia"])
     html = (
         '<!doctype html><html lang="pt-BR"><body style="margin:0;padding:24px;'
         "background:#DAF1DE;font-family:'Plus Jakarta Sans',Arial,sans-serif;color:#051F20\">"
@@ -58,7 +58,7 @@ def _montar(
         f'<h1 style="margin:0 0 16px;font-size:20px;color:#163832">{escape(assunto)}</h1>'
         f'<p style="margin:0 0 16px">Olá, {escape(nome)}.</p>'
         f"{blocos}"
-        '<p style="margin:24px 0 0;font-size:12px;color:#235347">Finanças</p>'
+        '<p style="margin:24px 0 0;font-size:12px;color:#235347">Balancia</p>'
         "</div></body></html>"
     )
     return ConteudoEmail(assunto=assunto, texto=texto, html=html)
@@ -141,7 +141,7 @@ def verificacao_email(nome: str, link: str) -> ConteudoEmail:
         "Confirme seu e-mail",
         nome,
         [
-            "Confirme que este endereço é seu para receber avisos e lembretes do Finanças. "
+            "Confirme que este endereço é seu para receber avisos e lembretes da Balancia. "
             f"O link vale por {settings.TOKEN_VERIFICACAO_HORAS} horas.",
             "Se você não criou uma conta, ignore este e-mail.",
         ],
@@ -155,7 +155,7 @@ def tentativa_de_cadastro(nome: str) -> ConteudoEmail:
         "Tentativa de cadastro com seu e-mail",
         nome,
         [
-            "Alguém tentou criar uma conta no Finanças com este e-mail, que já está cadastrado. "
+            "Alguém tentou criar uma conta na Balancia com este e-mail, que já está cadastrado. "
             "Nenhuma conta nova foi criada e nada mudou na sua.",
             f"Se foi você, é só entrar: {base}/#/entrar",
             "Se você não lembra a senha, ou se não reconhece esta conta, redefina a senha pelo botão abaixo. "
@@ -193,7 +193,7 @@ def confirmar_troca_email(nome: str, link: str) -> ConteudoEmail:
         "Confirme seu novo e-mail",
         nome,
         [
-            "Recebemos um pedido para usar este endereço na sua conta do Finanças. "
+            "Recebemos um pedido para usar este endereço na sua conta da Balancia. "
             f"O link vale por {settings.TOKEN_TROCAR_EMAIL_MIN} minutos.",
             "Se você não pediu essa troca, ignore este e-mail.",
         ],
@@ -289,10 +289,10 @@ def lembrete_contas(nome: str, itens: list[ItemLembrete], hoje: date) -> Conteud
         nome,
         [
             "Confira os lembretes das suas contas recorrentes.",
-            "Quando pagar ou receber, marque a conta como paga no Finanças: o vencimento avança "
+            "Quando pagar ou receber, marque a conta como paga na Balancia: o vencimento avança "
             "e os lembretes dessa data param. Você pode ajustar esses avisos nas preferências.",
         ],
-        ("Abrir o Finanças", settings.FRONT_URL),
+        ("Abrir a Balancia", settings.FRONT_URL),
         secoes,
     )
 
@@ -379,6 +379,6 @@ def resumo_mensal(
         f"Seu resumo de {nome_do_mes(mes)}",
         nome,
         paragrafos,
-        ("Abrir o Finanças", settings.FRONT_URL),
+        ("Abrir a Balancia", settings.FRONT_URL),
         secoes,
     )

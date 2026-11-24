@@ -254,7 +254,7 @@ export function abrirImportacao({ aoImportar } = {}) {
         { class: "im-pronto", "aria-live": "polite" },
         el("span", { class: "im-pronto-ic", "aria-hidden": "true" }, icone("sucesso")),
         el("h3", { texto: criadas === 1 ? "1 transação importada" : `${criadas} transações importadas` }),
-        ignoradas ? el("p", { texto: `${ignoradas} já estavam no Finanças e ficaram de fora.` }) : null,
+        ignoradas ? el("p", { texto: `${ignoradas} já estavam na Balancia e ficaram de fora.` }) : null,
       ),
     );
     const ver = el("a", { class: "btn btn-primario", href: `#/transacoes?mes=${estado.mesImportado}`, texto: "Ver transações" });

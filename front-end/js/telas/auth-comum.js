@@ -8,7 +8,7 @@ export function telaAuth(...conteudo) {
   return el(
     "div",
     { class: "auth" },
-    el("div", { class: "auth-caixa" }, el("a", { class: "auth-marca", href: "#/entrar" }, logo({ animada: true }), el("span", { texto: "Finanças", translate: "no" })), ...conteudo),
+    el("div", { class: "auth-caixa" }, el("a", { class: "auth-marca", href: "#/entrar" }, logo({ animada: true }), el("span", { texto: "Balancia", translate: "no" })), ...conteudo),
   );
 }
 

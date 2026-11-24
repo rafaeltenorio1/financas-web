@@ -361,7 +361,7 @@ export async function montar(raiz) {
     if (!contas.length) {
       const botao = el("button", { type: "button", class: "btn btn-primario", texto: "Cadastrar a primeira conta" });
       botao.addEventListener("click", () => nova.click());
-      lista.append(el("div", { class: "ct-vazio" }, el("strong", { texto: "Você ainda não tem contas recorrentes." }), "Cadastre aluguel, internet, assinaturas e o Finanças avisa antes de vencer.", el("br"), botao));
+      lista.append(el("div", { class: "ct-vazio" }, el("strong", { texto: "Você ainda não tem contas recorrentes." }), "Cadastre aluguel, internet, assinaturas e a Balancia avisa antes de vencer.", el("br"), botao));
       return;
     }
     const ativasDespesa = contas.filter((c) => c.ativa && c.tipo === "despesa");

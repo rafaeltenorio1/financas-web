@@ -85,7 +85,7 @@ async function renderizar() {
   if (minhaVersao !== versao) return;
 
   const alvo = montarLayout(raizApp, { caminho, logado: !rota.publica });
-  document.title = rota.titulo ? `${rota.titulo} | Finanças` : "Finanças";
+  document.title = rota.titulo ? `${rota.titulo} | Balancia` : "Balancia";
   desmontarAtual = await modulo.montar(alvo, { parametros, navegar });
   const foco = alvo.querySelector("[data-foco-inicial]") || alvo.querySelector("h1");
   if (foco) {

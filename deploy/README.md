@@ -1,8 +1,6 @@
 # Publicação na Oracle Cloud
 
-Passo a passo para colocar o Finanças no ar numa VM ARM gratuita da Oracle, com HTTPS pelo Caddy, e-mail pelo Resend e backup cifrado no Cloudflare R2.
-
-Troque `seudominio.com.br` pelo domínio escolhido em todos os comandos.
+Passo a passo para colocar a Balancia no ar numa VM ARM gratuita da Oracle, com HTTPS pelo Caddy, e-mail pelo Resend e backup cifrado no Cloudflare R2.
 
 ## Visão geral
 
@@ -12,7 +10,7 @@ internet ── 80/443 ──> Caddy (deploy/proxy) ──┬── /       fron
 ```
 
 - `deploy/proxy/`: Caddy compartilhado entre os projetos do servidor. Sobe **antes** dos projetos, porque cria a rede `proxy`.
-- `docker-compose.yml`: API e banco do Finanças. Em produção, sempre com `-f docker-compose.yml`, para o override de desenvolvimento ficar de fora.
+- `docker-compose.yml`: API e banco da Balancia. Em produção, sempre com `-f docker-compose.yml`, para o override de desenvolvimento ficar de fora.
 - `deploy/deploy.sh`: atualiza o código, faz backup, aplica as migrações e confere a saúde.
 - `deploy/backup.sh` e `deploy/restaurar.sh`: backup cifrado no R2 e restauração com conferência.
 
@@ -152,7 +150,7 @@ Crie `/srv/financas/deploy/proxy/.env`:
 
 ```
 ACME_EMAIL=seu-email@exemplo.com
-FINANCAS_DOMINIO=seudominio.com.br
+FINANCAS_DOMINIO=balancia.com.br
 ```
 
 Suba o proxy:
@@ -189,16 +187,16 @@ PROXIES_CONFIAVEIS=["172.30.0.10"]
 COOKIE_SECURE=true
 SECRET_KEY=<gerado>
 TOTP_CHAVE=<gerado>
-CORS_ORIGINS=["https://seudominio.com.br"]
+CORS_ORIGINS=["https://balancia.com.br"]
 
 SMTP_HOST=smtp.resend.com
 SMTP_PORTA=587
 SMTP_SEGURANCA=starttls
 SMTP_USUARIO=resend
 SMTP_SENHA=<API key do Resend>
-EMAIL_REMETENTE=Nome do Site <nao-responda@seudominio.com.br>
+EMAIL_REMETENTE=Balancia <nao-responda@balancia.com.br>
 
-FRONT_URL=https://seudominio.com.br
+FRONT_URL=https://balancia.com.br
 ```
 
 - **Guarde uma cópia deste arquivo fora do servidor**, num gerenciador de senhas. Sem a mesma `TOTP_CHAVE`, um backup restaurado perde o 2FA de todo mundo. Sem a mesma `SECRET_KEY`, só os tokens CSRF mudam.
@@ -207,7 +205,7 @@ FRONT_URL=https://seudominio.com.br
 
 ## 9. E-mail (Resend) e DNS do domínio
 
-1. No Resend, em *Domains → Add domain*, informe `seudominio.com.br` e a região `sa-east-1` (São Paulo), se estiver disponível.
+1. No Resend, em *Domains → Add domain*, informe `balancia.com.br` e a região `sa-east-1` (São Paulo), se estiver disponível.
 2. Copie para o Cloudflare **exatamente** os registros que o Resend mostrar (MX e TXT de SPF no subdomínio `send`, TXT de DKIM `resend._domainkey`), todos com a nuvem cinza.
 3. Acrescente o **DMARC**: tipo TXT, nome `_dmarc`, conteúdo:
    ```
@@ -268,8 +266,8 @@ No primeiro deploy, o banco está vazio, então o script pula o backup ("primeir
 
 Confira:
 
-- `https://seudominio.com.br` abre a tela de entrada com o cadeado do HTTPS.
-- `https://seudominio.com.br/api/saude` responde `{"api":"ok","banco":true}`.
+- `https://balancia.com.br` abre a tela de entrada com o cadeado do HTTPS.
+- `https://balancia.com.br/api/saude` responde `{"api":"ok","banco":true}`.
 - O cadastro envia o e-mail de verificação, e o link abre o site.
 - [securityheaders.com](https://securityheaders.com) e [ssllabs.com/ssltest](https://www.ssllabs.com/ssltest/) mostram nota A ou melhor.
 
@@ -299,7 +297,7 @@ O `scp` roda no seu computador; os demais comandos, na VM.
 
 **UptimeRobot.** Crie um monitor do tipo *HTTP(s) - Keyword*:
 
-- URL: `https://seudominio.com.br/api/saude`;
+- URL: `https://balancia.com.br/api/saude`;
 - palavra-chave: `"banco":true`;
 - intervalo: 5 min.
 

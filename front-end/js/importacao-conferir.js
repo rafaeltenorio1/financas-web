@@ -190,8 +190,8 @@ export function montarConferir({ previa, nomeArquivo, categorias, aoTrocar, aoIn
     const total = rendimentos.reduce((soma, i) => soma + Number(i.valor), 0);
     blocos.push(grupo({ titulo: "Rendimentos pequenos", contagem: contar(rendimentos.length), dica: `${moedaComSinal(total, "receita")} fora da importação`, itensDoGrupo: rendimentos, montarLinha: (i) => linha(i, [campoCategoria(i)]), aberto: false }));
   }
-  if (repetidos.length) blocos.push(grupo({ titulo: "Já estavam no Finanças", contagem: contar(repetidos.length), dica: "Não serão importadas de novo", itensDoGrupo: repetidos, montarLinha: (i) => linha(i), aberto: false }));
-  if (!novos.length) blocos.push(el("p", { class: "im-nota", texto: "Todas as transações deste arquivo já estão no Finanças. Não há nada novo para importar." }));
+  if (repetidos.length) blocos.push(grupo({ titulo: "Já estavam na Balancia", contagem: contar(repetidos.length), dica: "Não serão importadas de novo", itensDoGrupo: repetidos, montarLinha: (i) => linha(i), aberto: false }));
+  if (!novos.length) blocos.push(el("p", { class: "im-nota", texto: "Todas as transações deste arquivo já estão na Balancia. Não há nada novo para importar." }));
 
   const elemento = el("div", { class: "im-conferir" }, ...blocos);
   atualizarTotais();

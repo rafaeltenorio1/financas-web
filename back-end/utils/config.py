@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     LOGIN_MAX_FALHAS_IP: int = 20
     LIMPEZA_INTERVALO_MIN: int = 60
     TENTATIVAS_RETENCAO_DIAS: int = 30
-    TOTP_EMISSOR: str = "Finanças"
+    TOTP_EMISSOR: str = "Balancia"
     DESAFIO_2FA_MIN: int = 5
 
     SMTP_HOST: str = "localhost"
@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     SMTP_USUARIO: str = ""
     SMTP_SENHA: str = ""
     SMTP_TIMEOUT_S: int = 10
-    EMAIL_REMETENTE: str = "Finanças <nao-responda@localhost>"
+    EMAIL_REMETENTE: str = "Balancia <nao-responda@localhost>"
 
     FRONT_URL: str = "http://localhost:5500"
     TOKEN_VERIFICACAO_HORAS: int = 24

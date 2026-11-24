@@ -43,7 +43,7 @@ async def saude(db: AsyncSession = Depends(get_db)):
 def criar_app() -> FastAPI:
     documentacao = settings.AMBIENTE == "desenvolvimento"
     app = FastAPI(
-        title="Finanças",
+        title="Balancia",
         version="0.1.0",
         lifespan=lifespan,
         docs_url="/docs" if documentacao else None,

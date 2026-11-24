@@ -1,4 +1,4 @@
-const CACHE = "financas-offline-v1";
+const CACHE = "financas-offline-v2";
 const ARQUIVOS_OFFLINE = ["/offline.html", "/css/tokens.css", "/css/offline.css", "/img/pwa/icone.svg"];
 
 self.addEventListener("install", (evento) => {

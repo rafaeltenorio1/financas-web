@@ -84,7 +84,7 @@ export function janelaNome({ aoSalvar }) {
   const j = janela({ titulo: "Seu nome" });
   const nome = campo({ id: "jc-nome", rotulo: "Nome", autocomplete: "name", maxlength: 100, value: usuarioAtual()?.nome ?? "" });
   const salvar = botao("Salvar", "btn-primario", "submit");
-  j.corpo.append(el("p", { class: "jc-texto", texto: "É como o Finanças chama você nas telas e nos e-mails." }), nome.bloco);
+  j.corpo.append(el("p", { class: "jc-texto", texto: "É como a Balancia chama você nas telas e nos e-mails." }), nome.bloco);
   j.botoes.append(botao("Cancelar", "btn-secundario"), salvar);
   j.botoes.firstChild.addEventListener("click", j.fechar);
   nome.entrada.focus();
@@ -207,7 +207,7 @@ function mostrarCodigos(j, codigos, aoConcluir) {
   });
   const baixar = botao("Baixar .txt", "btn-secundario");
   baixar.addEventListener("click", () => {
-    const arquivo = new Blob([`Códigos de recuperação do Finanças\nCada código funciona uma vez.\n\n${codigos.join("\n")}\n`], { type: "text/plain;charset=utf-8" });
+    const arquivo = new Blob([`Códigos de recuperação da Balancia\nCada código funciona uma vez.\n\n${codigos.join("\n")}\n`], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(arquivo);
     const link = el("a", { href: url, download: "financas-codigos-de-recuperacao.txt" });
     document.body.append(link);

@@ -42,7 +42,7 @@ export function mensagemParaProximaTela() {
 }
 
 function navegacao(caminho) {
-  const nav = el("nav", { class: "nav", "aria-label": "Principal" }, el("a", { class: "nav-marca", href: "#/", translate: "no" }, logo(), el("span", { texto: "Finanças" })));
+  const nav = el("nav", { class: "nav", "aria-label": "Principal" }, el("a", { class: "nav-marca", href: "#/", translate: "no" }, logo(), el("span", { texto: "Balancia" })));
   for (const item of ITENS_NAV) {
     const atual = item.caminho === caminho;
     const link = el(
@@ -90,7 +90,7 @@ function sugerirInstalacao() {
   if (!deveSugerirInstalacao()) return;
   marcarSugestaoVista();
   setTimeout(() => {
-    avisar("Instale o Finanças no celular, como um app.", {
+    avisar("Instale a Balancia no celular, como um app.", {
       tipo: "info",
       duracao: 10000,
       acao: { texto: "Ver como", executar: () => navegar("/conta") },
