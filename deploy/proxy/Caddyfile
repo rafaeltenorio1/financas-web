@@ -1,0 +1,38 @@
+{
+	email {$ACME_EMAIL}
+}
+
+(seguranca) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+		-Server
+	}
+}
+
+{$FINANCAS_DOMINIO} {
+	import seguranca
+	encode zstd gzip
+
+	request_body {
+		max_size 3MB
+	}
+
+	handle_path /api/* {
+		reverse_proxy financas-api:8000
+	}
+
+	handle {
+		root * /srv/financas
+		header {
+			Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+			Cache-Control "no-cache"
+		}
+		file_server
+	}
+
+	log
+}
