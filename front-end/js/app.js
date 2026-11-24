@@ -3,8 +3,11 @@ import { registrar, iniciarRotas, navegar, caminhoAtual, recarregar } from "./ro
 import { usuarioAtual, encerrarLocalmente, sair } from "./sessao.js";
 import { logo } from "./logo.js";
 import { animacoesLigadas, aplicarPreferenciaDeAnimacoes } from "./movimento.js";
+import { iniciarInstalacao, deveSugerirInstalacao, marcarSugestaoVista } from "./instalar.js";
+import { avisar } from "./avisos.js";
 
 aplicarPreferenciaDeAnimacoes();
+iniciarInstalacao();
 
 const ITENS_NAV = [
   { caminho: "/", rotulo: "Painel", icone: "painel" },
@@ -79,7 +82,20 @@ function layout(raiz, { caminho, logado }) {
     principal.focus();
   });
   raiz.append(pular, el("div", { class: "app" }, navegacao(caminho), principal));
+  sugerirInstalacao();
   return principal;
+}
+
+function sugerirInstalacao() {
+  if (!deveSugerirInstalacao()) return;
+  marcarSugestaoVista();
+  setTimeout(() => {
+    avisar("Instale o Finanças no celular, como um app.", {
+      tipo: "info",
+      duracao: 10000,
+      acao: { texto: "Ver como", executar: () => navegar("/conta") },
+    });
+  }, 2500);
 }
 
 window.addEventListener("sessao-expirada", () => {

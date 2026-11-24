@@ -147,6 +147,7 @@
 .aviso-flutuante > span { flex: 1; }
 .aviso-sucesso .ic-sm { color: var(--receita-escura); }
 .aviso-erro .ic-sm { color: var(--despesa-escura); }
+.aviso-info .ic-sm { color: var(--no-claro-suave); }
 .aviso-acao { padding: 6px 10px; border-radius: var(--raio-sm); font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
 .aviso-acao:hover { background: rgba(5, 31, 32, 0.08); }
 .aviso-fechar { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; color: var(--no-claro-suave); }

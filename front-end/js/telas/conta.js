@@ -4,6 +4,7 @@ import { avisar } from "../avisos.js";
 import { definirUsuario, usuarioAtual } from "../sessao.js";
 import { sairDaConta } from "../app.js";
 import { animacoesLigadas, definirAnimacoes } from "../movimento.js";
+import { aoMudarInstalacao, estadoDaInstalacao, instalar } from "../instalar.js";
 import { janelaDoisFatores, janelaEmail, janelaExcluir, janelaFuso, janelaNome, janelaSenha, nomeDoFuso } from "../janelas-conta.js";
 
 const DIAS = [0, 1, 2, 3, 5, 7];
@@ -76,6 +77,41 @@ export async function montar(raiz, { navegar }) {
       el("span", { class: "cf-texto" }, el("label", { for: "cf-animacoes", class: "cf-titulo", texto: "Animações" }), dica("animacoes", "Animações")),
       el("label", { class: "cf-chave", for: "cf-animacoes" }, caixa, el("span", { class: "interruptor", "aria-hidden": "true" })),
     );
+  }
+
+  function instalacao() {
+    const estado = estadoDaInstalacao();
+    if (estado === "disponivel") {
+      return linha({
+        ic: "c-celular",
+        titulo: "Instalar o app",
+        descricao: "Abra o Finanças direto da tela inicial",
+        aoClicar: async () => {
+          if (await instalar()) avisar("Finanças instalado neste aparelho.");
+        },
+      });
+    }
+    if (estado !== "ios") return null;
+    const passos = el(
+      "div",
+      { class: "cf-passos", id: "cf-passos-instalar", hidden: "" },
+      el(
+        "ol",
+        {},
+        el("li", {}, "Abra este site no Safari."),
+        el("li", {}, "Toque em Compartilhar ", el("span", { class: "cf-passo-ic", "aria-hidden": "true" }, icone("enviar", "ic-sm")), " na barra do navegador."),
+        el("li", { texto: "Escolha “Adicionar à Tela de Início” e toque em Adicionar." }),
+      ),
+    );
+    const botao = linha({ ic: "c-celular", titulo: "Instalar o app", descricao: "Abra o Finanças direto da tela inicial" });
+    botao.setAttribute("aria-expanded", "false");
+    botao.setAttribute("aria-controls", "cf-passos-instalar");
+    botao.addEventListener("click", () => {
+      const abrir = passos.hidden;
+      passos.hidden = !abrir;
+      botao.setAttribute("aria-expanded", String(abrir));
+    });
+    return el("div", { class: "cf-instalar" }, botao, passos);
   }
 
   function diasAntes() {
@@ -176,7 +212,7 @@ export async function montar(raiz, { navegar }) {
           linha({ ic: "contas", titulo: "Fuso horário", descricao: "Hora dos avisos e virada do mês", valor: nomeDoFuso(u.fuso), aoClicar: () => janelaFuso({ aoSalvar: desenhar }) }),
         ),
       ),
-      secao("Neste aparelho", interruptorAnimacoes()),
+      secao("Neste aparelho", instalacao(), interruptorAnimacoes()),
       secao(
         "Mais",
         linha({ ic: "categorias", titulo: "Categorias", descricao: "Criar e editar as suas", href: "#/categorias" }),
@@ -205,9 +241,11 @@ export async function montar(raiz, { navegar }) {
   document.addEventListener("click", aoClicarFora);
   document.addEventListener("keydown", aoTeclar);
 
+  const pararDeOuvirInstalacao = aoMudarInstalacao(() => desenhar());
   desenhar();
 
   return () => {
+    pararDeOuvirInstalacao();
     document.removeEventListener("click", aoClicarFora);
     document.removeEventListener("keydown", aoTeclar);
   };

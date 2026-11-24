@@ -1,0 +1,32 @@
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: var(--esp-6) var(--esp-4) calc(var(--esp-6) + env(safe-area-inset-bottom));
+  font-family: var(--fonte);
+  line-height: 1.5;
+  background: var(--fundo);
+  color: var(--texto);
+}
+
+.offline { max-width: 26rem; text-align: center; }
+.offline img { display: block; margin: 0 auto var(--esp-5); }
+.offline h1 { margin: 0 0 var(--esp-2); font-size: var(--texto-xl); }
+.offline p { margin: 0 0 var(--esp-6); color: var(--texto-suave); }
+
+.offline-botao {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 var(--esp-6);
+  border-radius: var(--raio-md);
+  background: var(--destaque);
+  color: var(--no-destaque);
+  font-weight: 700;
+  text-decoration: none;
+}
+.offline-botao:focus-visible { outline: 3px solid var(--claro); outline-offset: 3px; }

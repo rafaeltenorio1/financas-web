@@ -113,3 +113,10 @@
   .jc-linha { grid-template-columns: 1fr; }
   .jc-botoes .btn { flex: 1; }
 }
+
+.cf-passos { padding: 4px 16px 16px 70px; border-bottom: 1px solid var(--borda); font-size: var(--texto-sm); color: var(--texto-suave); }
+.cf-passos ol { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+.cf-passo-ic { display: inline-grid; place-items: center; vertical-align: -3px; color: var(--texto); }
+@media (max-width: 640px) {
+  .cf-passos { padding-left: 16px; }
+}

@@ -12,7 +12,7 @@ function obterRegiao() {
 }
 
 export function avisar(texto, { acao, duracao = 6000, tipo = "sucesso" } = {}) {
-  const caixa = el("div", { class: `aviso-flutuante aviso-${tipo}` }, icone(tipo === "erro" ? "erro" : "sucesso", "ic-sm"), el("span", { texto }));
+  const caixa = el("div", { class: `aviso-flutuante aviso-${tipo}` }, icone(tipo === "erro" ? "erro" : tipo === "info" ? "info" : "sucesso", "ic-sm"), el("span", { texto }));
   let temporizador = null;
   const fechar = () => {
     clearTimeout(temporizador);
