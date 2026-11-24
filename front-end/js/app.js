@@ -5,6 +5,7 @@ import { logo } from "./logo.js";
 import { animacoesLigadas, aplicarPreferenciaDeAnimacoes } from "./movimento.js";
 import { iniciarInstalacao, deveSugerirInstalacao, marcarSugestaoVista } from "./instalar.js";
 import { avisar } from "./avisos.js";
+import { mostrarBoasVindas } from "./dicas.js";
 
 aplicarPreferenciaDeAnimacoes();
 iniciarInstalacao();
@@ -82,12 +83,12 @@ function layout(raiz, { caminho, logado }) {
     principal.focus();
   });
   raiz.append(pular, el("div", { class: "app" }, navegacao(caminho), principal));
-  sugerirInstalacao();
+  aberturaSaiu.then(mostrarBoasVindas).then(sugerirInstalacao);
   return principal;
 }
 
 function sugerirInstalacao() {
-  if (!deveSugerirInstalacao()) return;
+  if (!usuarioAtual() || !deveSugerirInstalacao()) return;
   marcarSugestaoVista();
   setTimeout(() => {
     avisar("Instale a Balancia no celular, como um app.", {
@@ -115,6 +116,11 @@ export async function sairDaConta() {
   }
 }
 
+let marcarAberturaSaiu;
+const aberturaSaiu = new Promise((resolver) => {
+  marcarAberturaSaiu = resolver;
+});
+
 const RESPIRO_ABERTURA = 300;
 const LIMITE_ABERTURA = 3500;
 
@@ -127,11 +133,19 @@ const fimDaAbertura = new Promise((resolver) => {
 
 function tirarAbertura() {
   const abertura = document.getElementById("abertura");
-  if (!abertura) return document.documentElement.classList.remove("abrindo");
+  if (!abertura) {
+    document.documentElement.classList.remove("abrindo");
+    document.getElementById("app").inert = false;
+    return marcarAberturaSaiu();
+  }
   (animacoesLigadas() ? fimDaAbertura : Promise.resolve()).then(() => {
     document.documentElement.classList.remove("abrindo");
+    document.getElementById("app").inert = false;
     abertura.classList.add("saindo");
-    setTimeout(() => abertura.remove(), 400);
+    setTimeout(() => {
+      abertura.remove();
+      marcarAberturaSaiu();
+    }, 400);
   });
 }
 

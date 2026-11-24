@@ -90,8 +90,21 @@ async function renderizar() {
   const foco = alvo.querySelector("[data-foco-inicial]") || alvo.querySelector("h1");
   if (foco) {
     if (!foco.hasAttribute("tabindex") && !foco.matches("input, button, select, textarea, a")) foco.setAttribute("tabindex", "-1");
-    foco.focus({ preventScroll: true });
+    depoisDaAbertura(() => {
+      if (foco.isConnected && minhaVersao === versao) foco.focus({ preventScroll: true });
+    });
   }
+}
+
+function depoisDaAbertura(acao) {
+  const html = document.documentElement;
+  if (!html.classList.contains("abrindo")) return acao();
+  const observador = new MutationObserver(() => {
+    if (html.classList.contains("abrindo")) return;
+    observador.disconnect();
+    acao();
+  });
+  observador.observe(html, { attributes: true, attributeFilter: ["class"] });
 }
 
 export function iniciarRotas(raiz, layout) {
