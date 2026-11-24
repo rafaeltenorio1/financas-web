@@ -6,6 +6,7 @@ import { criarSeletorDeCategorias, esquecerUsoDasCategorias } from "./seletor-ca
 import { chaveDoDia, chaveDoMes, diaNoFuso, hoje, inicioDoMes, instanteLocal, lerChaveDoDia, somarDias, somarMeses } from "./datas.js";
 import { moeda } from "./formatos.js";
 import { avisar } from "./avisos.js";
+import { dicaUnica, marcarDica } from "./dicas.js";
 
 const FORMAS = [
   ["pix", "Pix"],
@@ -119,6 +120,7 @@ export async function abrirFormularioTransacao({ transacao = null, aoSalvar, aoF
         el("label", { for: "ft-valor", texto: "Valor" }),
         valor,
         erroValor,
+        editando ? null : dicaUnica("valor-centavos", "Digite só os números: 1250 vira R$\u00a012,50."),
       ),
       el("div", { class: "ft-secao campo" }, el("label", { class: "ft-rotulo", for: "ft-nome", texto: "Descrição" }), nome),
       el("div", { class: "ft-secao" }, el("h3", { texto: "Quando" }), chipsQuando, dataOutra, erroData),
@@ -301,6 +303,7 @@ export async function abrirFormularioTransacao({ transacao = null, aoSalvar, aoF
     try {
       const salva = editando ? await api.patch(`/transacoes/${transacao.id_transacao}`, corpo) : await api.post("/transacoes", corpo);
       esquecerCachesDoFormulario();
+      marcarDica("valor-centavos");
       dialogo.close("salvo");
       const rotulo = `${salva.tipo === "despesa" ? "Gasto" : "Ganho"} de ${moeda(salva.valor)}`;
       avisar(editando ? `${rotulo} atualizado.` : `${rotulo} salvo.`, {

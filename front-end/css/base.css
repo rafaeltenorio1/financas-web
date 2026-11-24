@@ -196,3 +196,53 @@ h1[tabindex="-1"]:focus, main[tabindex="-1"]:focus { outline: none; }
   .confirmacao-botoes { flex-direction: column-reverse; }
   .confirmacao-botoes .btn { width: 100%; }
 }
+
+.boas-vindas {
+  width: min(400px, calc(100vw - 32px));
+  max-width: none;
+  margin: auto;
+  padding: 0;
+  border: 0;
+  border-radius: var(--raio-lg);
+  background: transparent;
+  color: var(--texto);
+  overflow: visible;
+}
+.boas-vindas::backdrop { background: rgba(5, 31, 32, 0.8); backdrop-filter: blur(2px); }
+.boas-vindas[open] { animation: confirmacao-entra 220ms cubic-bezier(0.2, 0, 0, 1); }
+.bv-caixa {
+  display: grid;
+  justify-items: center;
+  gap: var(--esp-3);
+  padding: var(--esp-8) var(--esp-6) var(--esp-6);
+  border-radius: var(--raio-lg);
+  border: 1px solid var(--borda-forte);
+  background: var(--superficie);
+  box-shadow: var(--sombra);
+  text-align: center;
+}
+.bv-logo { width: 56px; height: 56px; margin-bottom: var(--esp-1); }
+.boas-vindas h2 { font-size: var(--texto-xl); }
+.bv-texto { color: var(--texto-suave); }
+.bv-pontos { display: grid; gap: var(--esp-3); width: 100%; margin: var(--esp-3) 0 var(--esp-2); padding: 0; list-style: none; text-align: left; font-size: var(--texto-sm); }
+.bv-pontos li { display: grid; grid-template-columns: 36px 1fr; gap: var(--esp-3); align-items: center; }
+.bv-ic { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 12px; background: color-mix(in srgb, var(--destaque) 16%, transparent); color: var(--destaque); }
+.bv-botao { width: 100%; min-height: 48px; }
+
+.dica-unica {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-2);
+  margin-top: var(--esp-2);
+  padding: 6px 6px 6px 12px;
+  border-radius: var(--raio-sm);
+  background: color-mix(in srgb, var(--destaque) 14%, transparent);
+  color: var(--texto);
+  font-size: var(--texto-xs);
+  font-weight: 600;
+  text-align: left;
+}
+.dica-unica > .ic-sm { flex: none; color: var(--destaque); }
+.dica-unica > span { flex: 1; }
+.dica-unica-fechar { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; color: var(--texto-suave); }
+.dica-unica-fechar:hover { background: color-mix(in srgb, var(--destaque) 18%, transparent); color: var(--texto); }
