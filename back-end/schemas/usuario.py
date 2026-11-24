@@ -20,6 +20,8 @@ NumeroId = Literal[
     "guardado", "quantidade", "assinaturas", "media12",
 ]
 
+DicaId = Literal["boas-vindas", "valor-centavos", "busca"]
+
 
 class CartaoPainel(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -82,3 +84,10 @@ class UsuarioOut(BaseModel):
     lembrete_atraso: bool
     resumo_mensal: bool
     preferencias_painel: dict | None
+    dicas_vistas: list[str]
+
+
+class DicaVistaIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: DicaId

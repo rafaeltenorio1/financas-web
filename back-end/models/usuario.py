@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime
 
 from sqlalchemy import BigInteger, CheckConstraint, Date, DateTime, String, true
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, validates
 
 from database import Base
@@ -29,6 +29,9 @@ class Usuario(Base):
     resumo_enviado_mes: Mapped[date | None] = mapped_column(Date)
     preferencias_painel: Mapped[dict | None] = mapped_column(JSONB)
     aviso_cadastro_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    dicas_vistas: Mapped[list[str]] = mapped_column(
+        ARRAY(String(40)), default=list, server_default="{}"
+    )
 
     __table_args__ = (
         CheckConstraint(

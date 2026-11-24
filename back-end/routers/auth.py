@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, Cookie
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import delete, or_, select, update
+from sqlalchemy import delete, func, or_, select, update
 
 from datetime import datetime, timedelta, timezone
 
@@ -32,7 +32,7 @@ from models.codigo_recuperacao import CodigoRecuperacao
 from models.desafio_2fa import Desafio2FA
 from models.enums import FinalidadeToken
 
-from schemas.usuario import UsuarioOut, UsuarioCreate, UsuarioUpdate
+from schemas.usuario import DicaVistaIn, UsuarioOut, UsuarioCreate, UsuarioUpdate
 from schemas.auth import (
     LoginIn,
     TrocaSenhaIn,
@@ -322,6 +322,20 @@ async def editar_me(
     await db.commit()
     await db.refresh(usuario)
     return usuario
+
+
+@router.post("/me/dicas", status_code=204, dependencies=[Depends(verificar_csrf)])
+async def marcar_dica_vista(
+    dados: DicaVistaIn,
+    usuario: Usuario = Depends(get_usuario_atual),
+    db: AsyncSession = Depends(get_db),
+):
+    await db.execute(
+        update(Usuario)
+        .where(Usuario.id_usuario == usuario.id_usuario, ~Usuario.dicas_vistas.contains([dados.id]))
+        .values(dicas_vistas=func.array_append(Usuario.dicas_vistas, dados.id))
+    )
+    await db.commit()
 
 
 @router.post("/logout", status_code=204, dependencies=[Depends(verificar_csrf)])
