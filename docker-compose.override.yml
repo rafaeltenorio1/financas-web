@@ -2,6 +2,8 @@ services:
   db:
     ports:
       - "127.0.0.1:5432:5432"
+    networks:
+      - default
 
   api:
     depends_on:
@@ -10,6 +12,10 @@ services:
     volumes:
       - ./back-end:/app
     command: uvicorn main:app --host 0.0.0.0 --reload
+    ports:
+      - "127.0.0.1:8000:8000"
+    networks:
+      - default
 
   mailpit:
     image: axllent/mailpit:v1.34
@@ -29,6 +35,13 @@ services:
       - pgadmin_data:/var/lib/pgadmin
     depends_on:
       - db
+
+networks:
+  banco:
+    internal: false
+  proxy:
+    name: financas_proxy_dev
+    external: false
 
 volumes:
   pgadmin_data:
